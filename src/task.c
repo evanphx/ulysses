@@ -73,21 +73,6 @@ void move_stack(void *new_stack_start, u32int size)
 
   int copy_size = initial_esp - old_stack_pointer;
 
-  monitor_write("old stack: ");
-  monitor_write_hex(old_stack_pointer);
-  monitor_write(", ");
-  monitor_write_hex(old_base_pointer);
-  monitor_write(" size=");
-  monitor_write_dec(copy_size);
-  monitor_write("\n");
-
-  monitor_write("new stack: ");
-  monitor_write_hex(new_stack_pointer);
-  monitor_write(", ");
-  monitor_write_hex(new_base_pointer);
-  monitor_write("\n");
-
-
   // Copy the stack.
   memcpy((void*)new_stack_pointer, (void*)old_stack_pointer, copy_size);
 

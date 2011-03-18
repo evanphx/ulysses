@@ -12,7 +12,13 @@ isr_t interrupt_handlers[256];
 
 void register_interrupt_handler(u8int n, isr_t handler)
 {
-    interrupt_handlers[n] = handler;
+  u8int isr = IRQ0 + n;
+  interrupt_handlers[isr] = handler;
+}
+
+void register_isr_handler(u8int n, isr_t handler)
+{
+  interrupt_handlers[n] = handler;
 }
 
 // This gets called from our ASM interrupt handler stub.
@@ -32,7 +38,9 @@ void isr_handler(registers_t regs)
         monitor_write("unhandled interrupt: ");
         monitor_write_hex(int_no);
         monitor_put('\n');
-        for(;;);
+        for(;;) {
+          asm volatile("hlt;");
+        }
     }
 }
 

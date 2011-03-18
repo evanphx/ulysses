@@ -1,6 +1,7 @@
 #include "monitor.h"
 
 #include "pci_db.h"
+#include "rtl8139.h"
 
 #define CMD(bus, device, var)   (0x80000000 | (bus << 16) | (device << 8) | (var & ~3))
 
@@ -8,6 +9,9 @@
 #define PCI_DEVICE_ID  0x02
 #define PCI_CLASS_REVISION	0x08
 #define PCI_HEADER_VAR 0x0e
+
+#define PCI_BAR_0 0x10
+#define PCI_IRQ 0x3c
 
 static const char* class2name(int class) {
   switch(class) {
@@ -122,7 +126,19 @@ static void pci_scan_bus() {
     monitor_write(", ");
     monitor_write(class2name(class));
 
+    u8int irq = pci_configb(0, device, PCI_IRQ);
+    u32int io_port = pci_configl(0, device, PCI_BAR_0) & ~3;
+
+    monitor_write(" irq=");
+    monitor_write_dec(irq);
+    monitor_write(", io=");
+    monitor_write_hex(io_port);
+
     monitor_write("\n");
+
+    if(device_id == 0x8139) {
+      init_rtl8139(io_port, irq);
+    }
   }
 }
 

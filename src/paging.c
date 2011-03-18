@@ -154,17 +154,15 @@ void initialise_paging()
         alloc_frame( get_page(i, 1, kernel_directory), 0, 0);
 
     // Before we enable paging, we must register our page fault handler.
-    register_interrupt_handler(14, page_fault);
+    register_isr_handler(14, page_fault);
 
     // Now, enable paging!
     switch_page_directory(kernel_directory);
 
-    monitor_write("initialize kernel heap.\n");
     // Initialise the kernel heap.
     kheap = create_heap(KHEAP_START, KHEAP_START+KHEAP_INITIAL_SIZE, 0xCFFFF000, 0, 0);
 
     current_directory = clone_directory(kernel_directory);
-    monitor_write("switch directory.\n");
     switch_page_directory(current_directory);
 }
 

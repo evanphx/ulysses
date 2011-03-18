@@ -14,7 +14,9 @@ typedef unsigned char  u8int;
 typedef          char  s8int;
 
 void outb(u16int port, u8int value);
+void outw(u16int port, u16int value);
 void outl(u16int port, u32int value);
+
 u8int inb(u16int port);
 u16int inw(u16int port);
 u32int inl(u16int port);
@@ -24,5 +26,13 @@ u32int inl(u16int port);
 
 extern void panic(const char *message, const char *file, u32int line);
 extern void panic_assert(const char *file, u32int line, const char *desc);
+
+#define htons(A) ((((u16int)(A) & 0xff00) >> 8) | \
+                  (((u16int)(A) & 0x00ff) << 8))
+#define htonl(A) ((((u32int)(A) & 0xff000000) >> 24) | \
+                  (((u32int)(A) & 0x00ff0000) >> 8)  | \
+                  (((u32int)(A) & 0x0000ff00) << 8)  | \
+                  (((u32int)(A) & 0x000000ff) << 24))
+
 
 #endif // COMMON_H

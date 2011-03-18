@@ -10,6 +10,12 @@ void outb(u16int port, u8int value)
 }
 
 // Write a byte out to the specified port.
+void outw(u16int port, u16int value)
+{
+    asm volatile ("outw %1, %0" : : "dN" (port), "a" (value));
+}
+
+// Write a byte out to the specified port.
 void outl(u16int port, u32int value)
 {
     asm volatile ("outl %1, %0" : : "dN" (port), "a" (value));

@@ -149,6 +149,10 @@ void monitor_write(char *c)
     }
 }
 
+void kputs(char* c) {
+  monitor_write(c);
+}
+
 void monitor_write_hex(u32int n)
 {
     s32int tmp;
@@ -188,6 +192,52 @@ void monitor_write_hex(u32int n)
         monitor_put (tmp+'0');
     }
 
+}
+
+void monitor_write_hex_np(u32int n)
+{
+    s32int tmp;
+
+    char noZeroes = 1;
+
+    int i;
+    for (i = 28; i > 0; i -= 4)
+    {
+        tmp = (n >> i) & 0xF;
+        if (tmp == 0 && noZeroes != 0)
+        {
+            continue;
+        }
+    
+        if (tmp >= 0xA)
+        {
+            noZeroes = 0;
+            monitor_put (tmp-0xA+'a' );
+        }
+        else
+        {
+            noZeroes = 0;
+            monitor_put( tmp+'0' );
+        }
+    }
+  
+    tmp = n & 0xF;
+    if (tmp >= 0xA)
+    {
+        monitor_put (tmp-0xA+'a');
+    }
+    else
+    {
+        monitor_put (tmp+'0');
+    }
+
+}
+
+void monitor_write_hex_byte(u8int byte) {
+  if(byte < 0x10) {
+    monitor_put('0');
+  }
+  monitor_write_hex_np(byte);
 }
 
 void monitor_write_dec(u32int n)

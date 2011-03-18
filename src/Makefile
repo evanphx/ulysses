@@ -5,7 +5,7 @@
 
 SOURCES=boot.o main.o monitor.o common.o descriptor_tables.o isr.o interrupt.o gdt.o timer.o \
         kheap.o paging.o ordered_array.o fs.o initrd.o task.o process.o syscall.o \
-				keyboard.o pci.o
+				keyboard.o pci.o rtl8139.o eth.o arp.o ip.o
 
 CFLAGS=-nostdlib -nostdinc -fno-builtin
 LDFLAGS=-Tlink.ld

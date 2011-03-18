@@ -71,18 +71,11 @@ int main(struct multiboot *mboot_ptr, u32int initial_stack)
     monitor_write_hex(initrd_location);
     monitor_write("-");
     monitor_write_hex(initrd_end-1);
-    monitor_write("\nTurning paging on..\n");
     // Start paging.
     initialise_paging();
 
     // Start multitasking.
     initialise_tasking();
-
-    u32int esp;
-    asm volatile("mov %%esp, %0" : "=r" (esp));
-    monitor_write("before stack: ");
-    monitor_write_hex(esp);
-    monitor_write("\n");
 
     u32int sp = 0xE0000000;
 
@@ -94,12 +87,6 @@ int main(struct multiboot *mboot_ptr, u32int initial_stack)
 }
 
 void main2() {
-    u32int esp;
-    asm volatile("mov %%esp, %0" : "=r" (esp));
-    monitor_write("Moved stack to: ");
-    monitor_write_hex(esp);
-    monitor_write("\n");
-
     // Initialise the initial ramdisk, and set it as the filesystem root.
     fs_root = initialise_initrd(initrd_location);
 
@@ -108,10 +95,12 @@ void main2() {
 
     init_pci();
 
-    monitor_write("Switching to user mode.\n");
-    switch_to_user_mode();
+    /* monitor_write("Switching to user mode.\n"); */
+    /* switch_to_user_mode(); */
 
-    syscall_monitor_write("Hello, user world!\n");
+    /* syscall_monitor_write("Hello, user world!\n"); */
 
-    for(;;);
+    for(;;) {
+      asm volatile("hlt;");
+    }
 }
