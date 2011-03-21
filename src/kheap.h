@@ -75,6 +75,8 @@ u32int kmalloc_int(u32int sz, int align, u32int *phys);
 **/
 u32int kmalloc_a(u32int sz);
 
+void* kmalloc_vp(int sz);
+
 /**
    Allocate a chunk of memory, sz in size. The physical address
    is returned in phys. Phys MUST be a valid pointer to u32int!

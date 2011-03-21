@@ -6,6 +6,8 @@
 
 // Some nice typedefs, to standardise sizes across platforms.
 // These typedefs are written for 32-bit X86.
+typedef unsigned long long u64;
+typedef          long long s64;
 typedef unsigned int   u32int;
 typedef          int   s32int;
 typedef unsigned short u16int;
@@ -26,6 +28,11 @@ u32int inl(u16int port);
 
 extern void panic(const char *message, const char *file, u32int line);
 extern void panic_assert(const char *file, u32int line, const char *desc);
+
+void kabort();
+
+int disable_interrupts();
+void restore_interrupts(int status);
 
 #define htons(A) ((((u16int)(A) & 0xff00) >> 8) | \
                   (((u16int)(A) & 0x00ff) << 8))

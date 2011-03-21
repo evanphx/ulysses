@@ -4,18 +4,20 @@
 #include "timer.h"
 #include "isr.h"
 #include "monitor.h"
+#include "rtc.h"
 
 u32int tick = 0;
 
 static void timer_callback(registers_t *regs)
 {
     tick++;
-    switch_task();
+    update_clock();
+    // switch_task();
 }
 
 void init_timer(u32int frequency)
 {
-  return;
+  init_clock();
     // Firstly, register our timer callback.
     register_interrupt_handler(0, &timer_callback);
 

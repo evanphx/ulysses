@@ -5,9 +5,11 @@
 
 SOURCES=boot.o main.o monitor.o common.o descriptor_tables.o isr.o interrupt.o gdt.o timer.o \
         kheap.o paging.o ordered_array.o fs.o initrd.o task.o process.o syscall.o \
-				keyboard.o pci.o rtl8139.o eth.o arp.o ip.o
+				keyboard.o pci.o rtl8139.o eth.o arp.o ip.o rtc.o pit.o
 
-CFLAGS=-nostdlib -nostdinc -fno-builtin
+OPT=-O0 -fno-inline
+CFLAGS=$(OPT) -nostdlib -fno-builtin -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip
+LIBGCC=`$(CC) -print-libgcc-file-name`
 LDFLAGS=-Tlink.ld
 ASFLAGS=-felf
 
@@ -20,7 +22,8 @@ clean:
 	-rm *.o kernel
 
 link:
-	$(LD) $(LDFLAGS) -o kernel $(SOURCES)
+	cd lwip; make
+	$(LD) $(LDFLAGS) -o kernel $(SOURCES) liblwip4.a $(LIBGCC)
 
 .s.o:
 	nasm $(ASFLAGS) $<

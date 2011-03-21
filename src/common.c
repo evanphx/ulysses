@@ -3,6 +3,23 @@
 
 #include "common.h"
 
+static int interrupts_on = 1;
+
+int disable_interrupts() {
+  if(!interrupts_on) return 0;
+
+  __asm__ volatile("cli;");
+  interrupts_on = 0;
+  return 1;
+}
+
+void restore_interrupts(int val) {
+  if(val) {
+    interrupts_on = 1;
+    __asm__ volatile("sti;");
+  }
+}
+
 // Write a byte out to the specified port.
 void outb(u16int port, u8int value)
 {
@@ -127,7 +144,9 @@ extern void panic(const char *message, const char *file, u32int line)
     monitor_write_dec(line);
     monitor_write("\n");
     // Halt by going into an infinite loop.
-    for(;;);
+    for(;;) {
+      asm volatile("hlt;");
+    }
 }
 
 extern void panic_assert(const char *file, u32int line, const char *desc)
@@ -143,5 +162,15 @@ extern void panic_assert(const char *file, u32int line, const char *desc)
     monitor_write_dec(line);
     monitor_write("\n");
     // Halt by going into an infinite loop.
-    for(;;);
+    for(;;) {
+      asm volatile("hlt;");
+    }
+}
+
+void kabort() {
+  asm volatile("cli"); // Disable interrupts.
+  kputs("Your kernel has aborted(). Get some cofffe.\n");
+  for(;;) {
+    asm volatile("hlt;");
+  }
 }

@@ -26,5 +26,8 @@ void monitor_write_hex_byte(u8int n);
 
 // Output a decimal value to the monitor.
 void monitor_write_dec(u32int n);
+void monitor_write_dec_ll(u64 n);
+
+void kprintf(char* fmt, ...);
 
 #endif // MONITOR_H

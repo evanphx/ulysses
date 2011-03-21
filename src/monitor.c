@@ -3,6 +3,7 @@
 //             but rewritten for JamesM's kernel tutorials.
 
 #include "monitor.h"
+#include <stdarg.h>
 
 // The VGA framebuffer starts at 0xB8000.
 u16int *video_memory = (u16int *)0xB8000;
@@ -240,33 +241,195 @@ void monitor_write_hex_byte(u8int byte) {
   monitor_write_hex_np(byte);
 }
 
-void monitor_write_dec(u32int n)
-{
+void monitor_write_dec(u32int n) {
+  if(n == 0) {
+    monitor_put('0');
+    return;
+  } else if(n < 0) {
+    monitor_put('-');
+    n = -n;
+  }
 
-    if (n == 0)
-    {
-        monitor_put('0');
-        return;
+  s32int acc = n;
+  char c[32];
+  int i = 0;
+  while(acc > 0) {
+    c[i] = '0' + acc%10;
+    acc /= 10;
+    i++;
+  }
+  c[i] = 0;
+
+  char c2[32];
+  c2[i--] = 0;
+  int j = 0;
+  while(i >= 0) {
+    c2[i--] = c[j++];
+  }
+  monitor_write(c2);
+}
+
+void monitor_write_dec_ll(u64 n) {
+  if(n == 0) {
+    monitor_put('0');
+    return;
+  } else if(n < 0) {
+    monitor_put('-');
+    n = -n;
+  }
+
+  s64 acc = n;
+  char c[32];
+  int i = 0;
+  while(acc > 0) {
+    c[i] = '0' + acc%10;
+    acc /= 10;
+    i++;
+  }
+  c[i] = 0;
+
+  char c2[32];
+  c2[i--] = 0;
+  int j = 0;
+  while(i >= 0) {
+    c2[i--] = c[j++];
+  }
+  monitor_write(c2);
+}
+
+void kprintf(char* fmt, ...) {
+  va_list ap;
+  char cur;
+  char c;
+  char* s;
+  int d;
+  long l;
+  long long ll;
+
+  va_start(ap, fmt);
+
+  while(*fmt) {
+    cur = *fmt++;
+    if(cur == '%') {
+      int zero_pad = 0;
+      int space_pad = 0;
+      int width = 0;
+      int is_long = 0;
+
+retry:
+      switch(*fmt++) {
+      case '%':
+        monitor_put('%');
+        break;
+      case 's':
+      case 'S':
+        s = va_arg(ap, char*);
+        monitor_write(s);
+        break;
+      case 'd':
+      case 'i':
+      case 'o':
+      case 'u':
+      case 'D':
+      case 'O':
+      case 'U':
+        switch(is_long) {
+        default:
+        case 0:
+          d = va_arg(ap, int);
+          monitor_write_dec(d);
+          break;
+        case 1:
+          l = va_arg(ap, long);
+          monitor_write_dec(l);
+          break;
+        case 2:
+          ll = va_arg(ap, long long);
+          monitor_write_dec_ll(ll);
+          break;
+        }
+        break;
+      case 'q':
+        monitor_write_dec_ll(*va_arg(ap, u64*));
+        break;
+      case 'x':
+      case 'X':
+      case 'p':
+        d = va_arg(ap, int);
+        monitor_write_hex_np(d);
+        break;
+      case 'C':
+      case 'c':
+        c = va_arg(ap, int);
+        monitor_put(c);
+        break;
+      case 'e':
+      case 'E':
+      case 'f':
+      case 'F':
+      case 'g':
+      case 'G':
+      case 'a':
+      case 'A':
+        monitor_write("<some float>");
+        break;
+      case 'l':
+        is_long++;
+        goto retry;
+      // Ignore these for now.
+      case 'h':
+      case 'j':
+      case 't':
+      case 'z':
+        goto retry;
+      case '0':
+        zero_pad = 1;
+        goto retry;
+      case ' ':
+        space_pad = 1;
+        goto retry;
+      case '1':
+        width = 1;
+        goto retry;
+      case '2':
+        width = 2;
+        goto retry;
+        break;
+      case '3':
+        width = 4;
+        goto retry;
+        break;
+      case '4':
+        width = 4;
+        goto retry;
+        break;
+      case '5':
+        width = 5;
+        goto retry;
+        break;
+      case '6':
+        width = 6;
+        goto retry;
+        break;
+      case '7':
+        width = 7;
+        goto retry;
+        break;
+      case '8':
+        width = 8;
+        goto retry;
+        break;
+      case '9':
+        width = 9;
+        goto retry;
+        break;
+      default:
+        break;
+      }
+    } else {
+      monitor_put(cur);
     }
+  }
 
-    s32int acc = n;
-    char c[32];
-    int i = 0;
-    while (acc > 0)
-    {
-        c[i] = '0' + acc%10;
-        acc /= 10;
-        i++;
-    }
-    c[i] = 0;
-
-    char c2[32];
-    c2[i--] = 0;
-    int j = 0;
-    while(i >= 0)
-    {
-        c2[i--] = c[j++];
-    }
-    monitor_write(c2);
-
+  va_end(ap);
 }

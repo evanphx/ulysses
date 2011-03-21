@@ -16,12 +16,17 @@ u32int kmalloc_int(u32int sz, int align, u32int *phys)
 {
     if (kheap != 0)
     {
+        if(align && sz < 0x1000) {
+          sz = 0x1000;
+        }
+
         void *addr = alloc(sz, (u8int)align, kheap);
         if (phys != 0)
         {
             page_t *page = get_page((u32int)addr, 0, kernel_directory);
             *phys = page->frame*0x1000 + ((u32int)addr&0xFFF);
         }
+        
         return (u32int)addr;
     }
     else
@@ -50,6 +55,17 @@ void kfree(void *p)
 u32int kmalloc_a(u32int sz)
 {
     return kmalloc_int(sz, 1, 0);
+}
+
+void* kmalloc_vp(int sz) {
+  void* p = (void*)kmalloc_int(sz, 0, 0);
+  return p;
+}
+
+void* krealloc_vp(void* ptr, int sz) {
+  void* new_ptr = kmalloc_vp(sz);
+  memcpy(new_ptr, ptr, sz);
+  return new_ptr;
 }
 
 u32int kmalloc_p(u32int sz, u32int *phys)
@@ -258,6 +274,7 @@ void *alloc(u32int size, u8int page_align, heap_t *heap)
     header_t *orig_hole_header = (header_t *)lookup_ordered_array(iterator, &heap->index);
     u32int orig_hole_pos = (u32int)orig_hole_header;
     u32int orig_hole_size = orig_hole_header->size;
+
     // Here we work out if we should split the hole we found into two parts.
     // Is the original hole size - requested hole size less than the overhead for adding a new hole?
     if (orig_hole_size-new_size < sizeof(header_t)+sizeof(footer_t))
@@ -280,6 +297,7 @@ void *alloc(u32int size, u8int page_align, heap_t *heap)
         hole_footer->header   = hole_header;
         orig_hole_pos         = new_location;
         orig_hole_size        = orig_hole_size - hole_header->size;
+
     }
     else
     {

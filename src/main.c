@@ -12,6 +12,7 @@
 #include "syscall.h"
 #include "keyboard.h"
 #include "pci.h"
+#include "rtc.h"
 
 extern u32int placement_address;
 u32int initial_esp;
@@ -56,7 +57,7 @@ int main(struct multiboot *mboot_ptr, u32int initial_stack)
 
     // Initialise the PIT to 100Hz
     asm volatile("sti");
-    init_timer(50);
+    init_timer(SLICE_HZ);
 
     show_cpuid();
 

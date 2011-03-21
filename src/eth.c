@@ -43,6 +43,7 @@ void eth_handoff(u8int* buf, int size) {
   monitor_write_hex(proto);
   monitor_write("\n");
 
+  /*
   if(proto == PROTO_ARP) {
     handle_arp(buf + sizeof(struct eth_header),
                size - sizeof(struct eth_header));
@@ -51,4 +52,5 @@ void eth_handoff(u8int* buf, int size) {
                size - sizeof(struct eth_header),
                hdr->src);
   }
+  */
 }

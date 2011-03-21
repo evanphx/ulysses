@@ -1,6 +1,10 @@
 #include "monitor.h"
 #include "isr.h"
 
+#include "lwip/netif.h"
+#include "ipv4/lwip/ip.h"
+#include "netif/etharp.h"
+
 /* Symbolic offsets to registers. */
 enum RTL8139_registers {
     MAC0 = 0,        /* Ethernet hardware address. */
@@ -183,6 +187,7 @@ static u32int default_tx_config =
 static int default_rx_buf_len = 8192 << 2;
 
 static u32int rtl8139_io;
+static u32int rtl8139_irq;
 static u32int rtl8139_rx_buffer;
 static u32int rtl8139_cur_rx;
 
@@ -195,6 +200,13 @@ static struct tx_buffer rtl8139_tx_buffers[4];
 static u32int rtl8139_tx_desc;
 
 static char rtl8139_mac[6];
+
+static struct netif rtl8139_lwip_netif;
+static struct ip_addr rtl8139_ipaddr = {0};
+static struct ip_addr rtl8139_netmask = {0};
+static struct ip_addr rtl8139_gw = {0};
+
+// END STATE
 
 char* eth_mac() {
   return rtl8139_mac;
@@ -337,7 +349,10 @@ static void rtl8139_receive(u32int io, u16int status) {
       monitor_write("\n");
       */
 
+      struct pbuf* pkt = pbuf_alloc(PBUF_RAW, rx_size, PBUF_RAM);
+      pbuf_take(pkt, u8buf_start + 4, rx_size);
       eth_handoff(u8buf_start + 4, rx_size);
+      ethernet_input(pkt, &rtl8139_lwip_netif);
     }
 
     rtl8139_cur_rx = (rtl8139_cur_rx + rx_size + 4 + 3) & ~3;
@@ -369,6 +384,7 @@ void rtl8139_transmit(u32int io, u8int* buf, int size) {
   monitor_write_dec(entry);
   kputs("\n");
 
+  kprintf("copy %p (%d) to %p\n", buf, size, rtl8139_tx_buffers[entry].virt);
   memcpy(rtl8139_tx_buffers[entry].virt, buf, size);
   outl(io + TxAddr0 + entry*4, rtl8139_tx_buffers[entry].phys);
   outl(io + TxStatus0 + entry*4, size & 0x1fff);
@@ -380,12 +396,49 @@ void xmit_packet(u8int* buf, int size) {
   rtl8139_transmit(rtl8139_io, buf, size);
 }
 
+err_t rtl8139_open(struct netif* netif);
+err_t rtl8139_input(struct pbuf* p, struct netif* netif) {
+  kputs("Would send packet out rtl8139 for lwip.\n");
+}
+
+err_t rtl8139_link_output(struct netif* netif, struct pbuf* p) {
+  xmit_packet(p->payload, p->len);
+}
+
+err_t rtl8139_output(struct netif* nif, struct pbuf* p, struct ip_addr* dest) {
+  etharp_output(nif, p, dest); 
+}
+
 void init_rtl8139(u32int io, u8int irq) {
+  rtl8139_io = io;
+  rtl8139_irq = irq;
+
+  memset(&rtl8139_lwip_netif, 0, sizeof(struct netif));
+
+  rtl8139_ipaddr.addr = inet_addr("10.0.2.15");
+
+  netif_add(&rtl8139_lwip_netif, &rtl8139_ipaddr, &rtl8139_netmask,
+            &rtl8139_gw, 0, rtl8139_open, rtl8139_input);
+
+  rtl8139_lwip_netif.linkoutput = rtl8139_link_output;
+  rtl8139_lwip_netif.output = rtl8139_output;
+
+  netif_set_default(&rtl8139_lwip_netif);
+  netif_set_up(&rtl8139_lwip_netif);
+}
+
+err_t rtl8139_open(struct netif* netif) {
   int i;
+
+  u32int io = rtl8139_io;
+  u32int irq = rtl8139_irq;
 
   rtl8139_power_on(io);
 
   rtl8139_read_mac(io, rtl8139_mac);
+
+  memcpy(rtl8139_lwip_netif.hwaddr, rtl8139_mac, 6);
+  rtl8139_lwip_netif.hwaddr_len = 6;
 
   monitor_write("Realtek 8139: MAC ");
   for(i = 0; i < 6; i++) {
@@ -420,7 +473,7 @@ void init_rtl8139(u32int io, u8int irq) {
   u32int tx_buf_size = 1546;
 
   for(i = 0; i < 4; i++) {
-    rtl8139_tx_buffers[i].virt = kmalloc_ap(tx_buf_size,
+    rtl8139_tx_buffers[i].virt = kmalloc_p(tx_buf_size,
         &rtl8139_tx_buffers[i].phys);
 
     int j;
@@ -434,7 +487,6 @@ void init_rtl8139(u32int io, u8int irq) {
   rtl8139_reset_rx_stats(io);
   rtl8139_enable_tx_rx(io);
 
-  rtl8139_io = io;
   register_interrupt_handler(irq, &rtl8139_interrupt);
   rtl8139_enable_interrupts(io);
 }
