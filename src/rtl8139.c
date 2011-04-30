@@ -2,6 +2,7 @@
 #include "isr.h"
 #include "eth.h"
 #include "kheap.h"
+#include "rtl8139.h"
 
 #define IN_KERNEL
 
@@ -190,20 +191,7 @@ static u32int default_tx_config =
 
 static int default_rx_buf_len = 8192 << 2;
 
-static u32int rtl8139_io;
-static u32int rtl8139_irq;
-static u32int rtl8139_rx_buffer;
-static u32int rtl8139_cur_rx;
-
-struct tx_buffer {
-  u32int virt;
-  u32int phys;
-};
-
-static struct tx_buffer rtl8139_tx_buffers[4];
-static u32int rtl8139_tx_desc;
-
-static char rtl8139_mac[6];
+RTL8139 rtl8139;
 
 static struct netif rtl8139_lwip_netif;
 static struct ip_addr rtl8139_ipaddr = {0};
@@ -213,33 +201,33 @@ static struct ip_addr rtl8139_gw = {0};
 // END STATE
 
 char* eth_mac() {
-  return rtl8139_mac;
+  return rtl8139.mac;
 }
 
-static void rtl8139_read_mac(u32int io, char* mac) {
+void RTL8139::read_mac() {
   int i;
   for(i = 0; i < 6; i++) {
-    mac[i] = inb(io + MAC0 + i);
+    mac[i] = ctrl.inb(MAC0 + i);
   }
 }
 
-static void rtl8139_power_on(u32int io) {
-  outb(io + Config1, 0);
+void RTL8139::power_on() {
+  ctrl.outb(0, Config1);
 }
 
-static void rtl8139_pm_wakeup(u32int io) {
-  u8int config = inb(io + Config1);
+void RTL8139::pm_wakeup() {
+  u8 config = ctrl.inb(Config1);
   config |= Cfg1_PM_Enable;
-  outb(io + Config1, config);
+  ctrl.outb(config, Config1);
 }
 
-static void rtl8139_reset(u32int io) {
+void RTL8139::reset() {
   int i = 0;
-  outb(io + ChipCmd, CmdReset);
+  ctrl.outb(CmdReset, ChipCmd);
 
   console.write("rtl8139: Resetting...");
   for(;;) {
-    u8int byte = inb(io + ChipCmd);
+    u8int byte = ctrl.inb(ChipCmd);
     if((byte & CmdReset) == 0) {
       console.write("reset\n");
       return;
@@ -249,72 +237,68 @@ static void rtl8139_reset(u32int io) {
   console.write("rtl8139: Timeout resetting.\n");
 }
 
-static void rtl8139_enable_tx_rx(u32int io) {
-  outb(io + ChipCmd, CmdTxEnb | CmdRxEnb);
+void RTL8139::enable_tx_rx() {
+  ctrl.outb(CmdTxEnb | CmdRxEnb, ChipCmd);
 }
 
-static void rtl8139_set_config(u32int io) {
-  outl(io + RxConfig, default_rx_config);
-  outl(io + TxConfig, default_tx_config);
+void RTL8139::set_config() {
+  ctrl.outl(default_rx_config, RxConfig);
+  ctrl.outl(default_tx_config, TxConfig);
 }
 
-static void rtl8139_unlock(u32int io) {
-  outb(io + Cfg9346, Cfg9346_Unlock);
+void RTL8139::unlock() {
+  ctrl.outb(Cfg9346_Unlock, Cfg9346);
 }
 
-static void rtl8139_lock(u32int io) {
-  outb(io + Cfg9346, Cfg9346_Lock);
+void RTL8139::lock() {
+  ctrl.outb(Cfg9346_Lock, Cfg9346);
 }
 
-static void rtl8139_set_clock(u32int io, int run) {
-  outb(io + HltClk, run ? 'R' : 'H');
+void RTL8139::set_clock(int run) {
+  ctrl.outb(run ? 'R' : 'H', HltClk);
 }
 
-static void rtl8139_set_rx_buffer(u32int io, u32int addr) {
-  outl(io + RxBuf, addr);
+void RTL8139::set_rx_buffer(u32int addr) {
+  ctrl.outl(addr, RxBuf);
 }
 
-static void rtl8139_reset_rx_stats(u32int io) {
-  outl(io + RxMissed, 0);
+void RTL8139::reset_rx_stats() {
+  ctrl.outl(0, RxMissed);
 }
 
-static void rtl8139_enable_interrupts(u32int io) {
-  outw(io + IntrMask, AllInterrupts);
+void RTL8139::enable_interrupts() {
+  ctrl.outw(AllInterrupts, IntrMask);
 }
 
-static u16int rtl8139_ack(u32int io) {
-  u16int status = inw(io + IntrStatus);
-  outw(io + IntrStatus, status);
-  return status;
+u16 RTL8139::ack() {
+  u16 s = status.inw();
+  status.outw(s);
+  return s;
 }
 
-static u16int rtl8139_status(u32int io) {
-  return inw(io + IntrStatus);
-}
-
-static u32int rtl8139_last_tx_status(u32int io) {
-  int entry = rtl8139_tx_desc;
+u32 RTL8139::last_tx_status() {
+  int entry = tx_desc;
   if(entry == 0) {
     entry = 3;
   } else {
     entry--;
   }
 
-  return inl(io + TxStatus0 + entry*4);
+  return ctrl.inl(TxStatus0 + entry*4);
 }
 
-static void rtl8139_receive(u32int io, u16int status) {
+void RTL8139::receive(u16int status) {
   int i;
 
-  while((inb(io + ChipCmd) & RxBufEmpty) == 0) {
-    int offset = rtl8139_cur_rx % default_rx_buf_len;
+  while((ctrl.inb(ChipCmd) & RxBufEmpty) == 0) {
+    int offset = cur_rx % default_rx_buf_len;
 
-    u16int buf_addr = inw(io + RxBufAddr);
-    u16int buf_ptr =  inw(io + RxBufPtr);
-    u8int cmd = inb(io + ChipCmd);
+    u16int buf_addr = ctrl.inw(RxBufAddr);
+    u16int buf_ptr =  ctrl.inw(RxBufPtr);
+    u8int cmd = ctrl.inb(ChipCmd);
 
-    u32int* buf_start = (u32int*)(rtl8139_rx_buffer + offset);
-    u8int*  u8buf_start = (u8int*)(rtl8139_rx_buffer + offset);
+    u32int* buf_start = (u32int*)(rx_buffer + offset);
+    u8int*  u8buf_start = (u8int*)(rx_buffer + offset);
     u32int rx_status = *buf_start;
     int rx_size = rx_status >> 16;
 
@@ -335,7 +319,7 @@ static void rtl8139_receive(u32int io, u16int status) {
     console.write(" size=");
     console.write_dec(rx_size);
     console.write(" cur_rx=");
-    console.write_dec(rtl8139_cur_rx);
+    console.write_dec(cur_rx);
     console.write(" offset=");
     console.write_dec(offset);
     kputs("\n");
@@ -359,20 +343,18 @@ static void rtl8139_receive(u32int io, u16int status) {
       ethernet_input(pkt, &rtl8139_lwip_netif);
     }
 
-    rtl8139_cur_rx = (rtl8139_cur_rx + rx_size + 4 + 3) & ~3;
-    outw(io + RxBufPtr, rtl8139_cur_rx - 16);
+    cur_rx = (cur_rx + rx_size + 4 + 3) & ~3;
+    ctrl.outw(cur_rx - 16, RxBufPtr);
   }
 }
 
 static void rtl8139_interrupt(registers_t* regs) {
-  u32int io = rtl8139_io;
-
-  u16int status = rtl8139_ack(io);
+  u16int status = rtl8139.ack();
 
   if(status & AllInterrupts == 0) return;
-  if(status & RxInterrupts) rtl8139_receive(io, status);
+  if(status & RxInterrupts) rtl8139.receive(status);
   if(status & TxInterrupts) {
-    int tx_status = rtl8139_last_tx_status(io);
+    int tx_status = rtl8139.last_tx_status();
     if(status == TxOK) {
       kputs("Got a TxOK interrupt.\n");
     } else {
@@ -381,23 +363,23 @@ static void rtl8139_interrupt(registers_t* regs) {
   }
 }
 
-void rtl8139_transmit(u32int io, u8int* buf, int size) {
-  int entry = rtl8139_tx_desc;
+void RTL8139::transmit(u8int* buf, int size) {
+  int entry = tx_desc;
 
   kputs("rtl8139: Writing to tx descriptor: ");
   console.write_dec(entry);
   kputs("\n");
 
-  console.printf("copy %p (%d) to %p\n", buf, size, rtl8139_tx_buffers[entry].virt);
-  memcpy((u8int*)rtl8139_tx_buffers[entry].virt, buf, size);
-  outl(io + TxAddr0 + entry*4, rtl8139_tx_buffers[entry].phys);
-  outl(io + TxStatus0 + entry*4, size & 0x1fff);
+  console.printf("copy %p (%d) to %p\n", buf, size, tx_buffers[entry].virt);
+  memcpy((u8int*)tx_buffers[entry].virt, buf, size);
+  ctrl.outl(tx_buffers[entry].phys, TxAddr0 + entry*4);
+  ctrl.outl(size & 0x1fff, TxStatus0 + entry*4);
 
-  if(++rtl8139_tx_desc > 4) rtl8139_tx_desc = 0;
+  if(++tx_desc > 4) tx_desc = 0;
 }
 
 void xmit_packet(u8int* buf, int size) {
-  rtl8139_transmit(rtl8139_io, buf, size);
+  rtl8139.transmit(buf, size);
 }
 
 err_t rtl8139_open(struct netif* netif);
@@ -414,8 +396,12 @@ err_t rtl8139_output(struct netif* nif, struct pbuf* p, struct ip_addr* dest) {
 }
 
 void init_rtl8139(u32int io, u8int irq) {
-  rtl8139_io = io;
-  rtl8139_irq = irq;
+  rtl8139.ctrl.port = io;
+  rtl8139.status.port = io + IntrStatus;
+
+  console.printf("Detected RTL8139 at port 0x%x (irq %d)\n", io, irq);
+
+  rtl8139.irq = irq;
 
   memset((u8int*)&rtl8139_lwip_netif, 0, sizeof(struct netif));
 
@@ -431,34 +417,26 @@ void init_rtl8139(u32int io, u8int irq) {
   netif_set_up(&rtl8139_lwip_netif);
 }
 
-err_t rtl8139_open(struct netif* netif) {
-  int i;
+void RTL8139::init() {
+  power_on();
 
-  u32int io = rtl8139_io;
-  u32int irq = rtl8139_irq;
-
-  rtl8139_power_on(io);
-
-  rtl8139_read_mac(io, rtl8139_mac);
-
-  memcpy((u8int*)rtl8139_lwip_netif.hwaddr, (u8int*)rtl8139_mac, 6);
-  rtl8139_lwip_netif.hwaddr_len = 6;
+  read_mac();
 
   console.write("Realtek 8139: MAC ");
-  for(i = 0; i < 6; i++) {
-    console.write_hex_np(rtl8139_mac[i]);
+  for(int i = 0; i < 6; i++) {
+    console.write_hex_np(mac[i]);
     if(i != 5) console.write(":");
   }
 
   console.write("\n");
 
-  rtl8139_unlock(io);
-  rtl8139_pm_wakeup(io);
-  rtl8139_set_clock(io, 0);
+  unlock();
+  pm_wakeup();
+  set_clock(0);
 
-  rtl8139_reset(io);
-  rtl8139_enable_tx_rx(io);
-  rtl8139_set_config(io);
+  reset();
+  enable_tx_rx();
+  set_config();
 
   u32int phys_rx_ring = 0;
   u32int virt_rx_ring = kmalloc_ap(default_rx_buf_len + 16, &phys_rx_ring);
@@ -469,28 +447,36 @@ err_t rtl8139_open(struct netif* netif) {
   console.write_hex(virt_rx_ring);
   console.write("\n");
 
-  rtl8139_set_rx_buffer(io, phys_rx_ring);
-  rtl8139_rx_buffer = virt_rx_ring;
-  rtl8139_cur_rx = 0;
+  set_rx_buffer(phys_rx_ring);
+  rx_buffer = virt_rx_ring;
+  cur_rx = 0;
 
   u32int tx_desc = 4;
   u32int tx_buf_size = 1546;
 
-  for(i = 0; i < 4; i++) {
-    rtl8139_tx_buffers[i].virt = kmalloc_p(tx_buf_size,
-        &rtl8139_tx_buffers[i].phys);
+  for(int i = 0; i < 4; i++) {
+    tx_buffers[i].virt = kmalloc_p(tx_buf_size,
+        &tx_buffers[i].phys);
 
     int j;
-    u8int* buf = (u8int*)rtl8139_tx_buffers[i].virt;
+    u8int* buf = (u8int*)tx_buffers[i].virt;
     for(j = 0; j < 50; j++) {
       buf[j] = i;
     }
   }
 
-  rtl8139_tx_desc = 0;
-  rtl8139_reset_rx_stats(io);
-  rtl8139_enable_tx_rx(io);
+  tx_desc = 0;
+  reset_rx_stats();
+  enable_tx_rx();
 
   register_interrupt_handler(irq, &rtl8139_interrupt);
-  rtl8139_enable_interrupts(io);
+}
+
+err_t rtl8139_open(struct netif* netif) {
+  rtl8139.init();
+
+  memcpy((u8int*)rtl8139_lwip_netif.hwaddr, (u8int*)rtl8139.mac, 6);
+  rtl8139_lwip_netif.hwaddr_len = 6;
+
+  rtl8139.enable_interrupts();
 }

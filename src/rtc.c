@@ -89,6 +89,7 @@ void init_clock() {
 
 void update_clock() {
   cur_usec += SLICE_US;
+  /*
   if(cur_usec > 1000000) {
     u64 cur_rdtsc = rdtsc();
 
@@ -107,4 +108,5 @@ void update_clock() {
     }
     last_rdtsc = cur_rdtsc;
   }
+  */
 }

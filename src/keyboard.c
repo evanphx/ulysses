@@ -2,8 +2,16 @@
 #include "isr.h"
 #include "monitor.h"
 
+#include "keyboard.h"
+
+Keyboard keyboard = {{0x60}};
+
 static void keyboard_callback(registers_t* regs) {
-  unsigned char code = inb(0x60);
+  keyboard.pressed();
+}
+
+void Keyboard::pressed() {
+  unsigned char code = io.inb();
 
   if(code & 0x80) {
     // handle press
@@ -12,6 +20,6 @@ static void keyboard_callback(registers_t* regs) {
   }
 }
 
-void init_keyboard() {
+void Keyboard::init() {
   register_interrupt_handler(1, &keyboard_callback);
 }

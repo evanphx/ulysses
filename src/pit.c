@@ -2,6 +2,8 @@
 #include "common.h"
 #include "rtc.h"
 
+#include "cpu.h"
+
 #define CLKNUM          1193180
 /*
  * Enable or disable timer 2.
@@ -105,7 +107,7 @@ u64 pit_timeRDTSC(u64* res) {
     ROUND64(SAMPLE_MULTIPLIER/(double)(SAMPLE_CLKS_INT-5))
   };
 
-  int ints = disable_interrupts();
+  int ints = cpu::disable_interrupts();
 
 restart:
   if(attempts >= 2) PANIC("timeRDTSC() calibation failed\n");
@@ -142,7 +144,7 @@ restart:
   set_PIT2(0);                        // reset timer 2 to be zero
   disable_PIT2();                     // turn off PIT 2
 
-  restore_interrupts(ints);
+  cpu::restore_interrupts(ints);
 
   intermediate = intermediate * 20;
 

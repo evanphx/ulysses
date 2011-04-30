@@ -1,8 +1,25 @@
+#ifndef PCI_H
+#define PCI_H
 
-struct pci_device;
+#include "io.h"
 
-typedef struct pci_bus {
-  struct pci_device* devices;
-} pci_bus;
+struct PCIBus {
+  IOPort io1;
+  IOPort io2;
+  IOPort var_io;
 
-void init_pci();
+  u8 bus;
+
+  u8 configb(u8 device, u8 var);
+  u32 configl(u8 device, u8 var);
+
+  const char* class2name(int klass);
+  bool detect();
+  void scan();
+
+  void init();
+};
+
+extern PCIBus pci_bus;
+
+#endif

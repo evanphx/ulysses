@@ -14,13 +14,15 @@
 #include "pci.h"
 #include "rtc.h"
 
+#include "cpu.h"
+
 extern "C" {
 
 extern u32int placement_address;
 u32int initial_esp;
 u32int initrd_location;
 
-void main2();
+void kmain2();
 
 static void show_cpuid() {
   u32int ebx, edx, ecx;
@@ -48,7 +50,7 @@ static void show_cpuid() {
   /* asm volatile("rdtsc\n" : "=a"(*lower), "=d"(*upper)); */
 /* } */
 
-int main(struct multiboot *mboot_ptr, u32int initial_stack)
+int kmain(struct multiboot *mboot_ptr, u32int initial_stack)
 {
     initial_esp = initial_stack;
     // Initialise all the ISRs and segmentation
@@ -58,7 +60,9 @@ int main(struct multiboot *mboot_ptr, u32int initial_stack)
     console.setup();
 
     // Initialise the PIT to 100Hz
-    asm volatile("sti");
+    cpu::interrupts_on = 1;
+    cpu::enable_interrupts();
+
     init_timer(SLICE_HZ);
 
     show_cpuid();
@@ -70,42 +74,41 @@ int main(struct multiboot *mboot_ptr, u32int initial_stack)
     // Don't trample our module with placement accesses, please!
     placement_address = initrd_end;
 
-    console.write("initrd: ");
-    console.write_hex(initrd_location);
-    console.write("-");
-    console.write_hex(initrd_end-1);
+    console.printf("initrd: 0x%x - 0x%x\n", initrd_location, initrd_end-1);
+
     // Start paging.
-    initialise_paging();
+    vmem.init();
 
     // Start multitasking.
-    initialise_tasking();
+    scheduler.init();
 
     u32int sp = 0xE0000000;
 
     asm volatile(
       "mov %0, %%esp\n"
       "mov %0, %%ebp\n"
-      "jmp main2\n"
+      "jmp kmain2\n"
     : : "r" (sp));
 }
 
-void main2() {
-    // Initialise the initial ramdisk, and set it as the filesystem root.
-    fs_root = initialise_initrd(initrd_location);
+void switch_to_user_mode();
 
-    init_keyboard();
-    initialise_syscalls();
+void kmain2() {
+  // Initialise the initial ramdisk, and set it as the filesystem root.
+  fs_root = initialise_initrd(initrd_location);
 
-    init_pci();
+  keyboard.init();
 
-    /* console.write("Switching to user mode.\n"); */
-    /* switch_to_user_mode(); */
+  initialise_syscalls();
 
-    /* syscall_monitor_write("Hello, user world!\n"); */
+  pci_bus.init();
 
-    for(;;) {
-      asm volatile("hlt;");
-    }
+  //console.write("Switching to user mode.\n");
+  scheduler.switch_to_user_mode();
+
+  syscall_monitor_write("Hello, user world!\n");
+
+  cpu::halt_loop();
 }
 
 }

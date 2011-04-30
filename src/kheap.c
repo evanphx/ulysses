@@ -11,7 +11,6 @@ extern "C" {
 // end is defined in the linker script.
 extern u32int end;
 u32int placement_address = (u32int)&end;
-extern page_directory_t *kernel_directory;
 heap_t *kheap=0;
 
 u32int kmalloc_int(u32int sz, int align, u32int *phys)
@@ -25,7 +24,7 @@ u32int kmalloc_int(u32int sz, int align, u32int *phys)
         void *addr = alloc(sz, (u8int)align, kheap);
         if (phys != 0)
         {
-            page_t *page = get_page((u32int)addr, 0, kernel_directory);
+            page *page = vmem.get_kernel_page((u32int)addr, 0);
             *phys = page->frame*0x1000 + ((u32int)addr&0xFFF);
         }
         
@@ -106,7 +105,7 @@ static void expand(u32int new_size, heap_t *heap)
     u32int i = old_size;
     while (i < new_size)
     {
-        alloc_frame( get_page(heap->start_address+i, 1, kernel_directory),
+        vmem.alloc_frame( vmem.get_kernel_page(heap->start_address+i, 1),
                      (heap->supervisor)?1:0, (heap->readonly)?0:1);
         i += 0x1000 /* page size */;
     }
@@ -133,7 +132,7 @@ static u32int contract(u32int new_size, heap_t *heap)
     u32int i = old_size - 0x1000;
     while (new_size < i)
     {
-        free_frame(get_page(heap->start_address+i, 0, kernel_directory));
+        vmem.free_frame(vmem.get_kernel_page(heap->start_address+i, 0));
         i -= 0x1000;
     }
 

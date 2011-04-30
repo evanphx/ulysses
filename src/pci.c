@@ -1,5 +1,5 @@
 #include "monitor.h"
-
+#include "pci.h"
 #include "pci_db.h"
 #include "rtl8139.h"
 
@@ -13,7 +13,9 @@
 #define PCI_BAR_0 0x10
 #define PCI_IRQ 0x3c
 
-static const char* class2name(int klass) {
+PCIBus pci_bus = {{0xCFB}, {0xCF8}, {0xCFC}, 0};
+
+const char* PCIBus::class2name(int klass) {
   switch(klass) {
   case 0x101:
     return "IDE Controller";
@@ -56,42 +58,34 @@ static const char* class2name(int klass) {
   return "Unknown Device";
 }
 
-static u32int pci_configb(u8int bus, u8int device, u8int var) {
-  outl(0xCF8, CMD(bus, device, var));
-  return inb(0xCFC + (var & 3));
+u8 PCIBus::configb(u8 device, u8 var) {
+  io2.outl(CMD(bus, device, var));
+  return var_io.inb(var & 3);
 }
 
-static u32int pci_configl(u8int bus, u8int device, u8int var) {
-  outl(0xCF8, CMD(bus, device, var));
-  return inl(0xCFC);
+u32 PCIBus::configl(u8 device, u8 var) {
+  io2.outl(CMD(bus, device, var));
+  return var_io.inl();
 }
 
-static void pci_scan_bus() {
-  int device;
-
+void PCIBus::scan() {
   console.write("Scanning PCI bus:\n");
 
-  for(device = 0; device < 0xff; device++) {
-    u32int header = pci_configb(0, device, PCI_HEADER_VAR);
+  for(int device = 0; device < 0xff; device++) {
+    u32 header = configb(device, PCI_HEADER_VAR);
 
-    u32int vendor = pci_configl(0, device, PCI_VENDOR_ID);
+    u32 vendor = configl(device, PCI_VENDOR_ID);
 
     if(vendor == 0xffffffff || vendor == 0x0) continue;
 
-    u32int vendor_id = vendor & 0xffff;
-    u32int device_id = vendor >> 16;
+    u32 vendor_id = vendor & 0xffff;
+    u32 device_id = vendor >> 16;
 
-    u32int klass = pci_configl(0, device, PCI_CLASS_REVISION) >> 16;
+    u32 klass = configl(device, PCI_CLASS_REVISION) >> 16;
 
     /* console.write("PCI Device: header="); */
     /* console.write_hex(header); */
-    console.write_hex(vendor_id);
-    console.write(":");
-    console.write_hex(device_id);
-    console.write(":");
-    console.write_hex(klass);
-
-    console.write("  ");
+    console.printf("%x:%x:%x   ", vendor_id, device_id, klass);
 
     int found_vendor = 0;
 
@@ -126,8 +120,8 @@ static void pci_scan_bus() {
     console.write(", ");
     console.write(class2name(klass));
 
-    u8int irq = pci_configb(0, device, PCI_IRQ);
-    u32int io_port = pci_configl(0, device, PCI_BAR_0) & ~3;
+    u8 irq = configb(device, PCI_IRQ);
+    u32 io_port = configl(device, PCI_BAR_0) & ~3;
 
     console.write(" irq=");
     console.write_dec(irq);
@@ -142,17 +136,24 @@ static void pci_scan_bus() {
   }
 }
 
-void init_pci() {
+bool PCIBus::detect() {
+  io1.outb(1);
+  int val = io2.inb();
 
-  outb(0xCFB, 0x1);
-  int val = inl(0xCF8);
-  outl(0xCF8, 0x80000000);
+  io2.outl(0x80000000);
+  bool valid = io2.inl() == 0x80000000;
 
-  if (inl (0xCF8) == 0x80000000) {
+  io2.outl(val);
+  return valid;
+}
+
+void PCIBus::init() {
+  if(pci_bus.detect()) {
     console.write("Detected PCI access.\n");
+  } else {
+    console.write("No PCI bus detected.\n");
+    return;
   }
 
-  outl(0xCF8, val);
-
-  pci_scan_bus();
+  pci_bus.scan();
 }

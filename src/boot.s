@@ -32,7 +32,7 @@ mboot:
     dd  start                   ; Kernel entry point (initial EIP).
 
 [GLOBAL start]                  ; Kernel entry point.
-[EXTERN main]                   ; This is the entry point of our C code
+[EXTERN kmain]                   ; This is the entry point of our C code
 
 start:
     ; Load multiboot information:
@@ -41,7 +41,7 @@ start:
 
     ; Execute the kernel:
     cli                         ; Disable interrupts.
-    call main                   ; call our main() function.
+    call kmain                   ; call our main() function.
 
 crazy:
     pause

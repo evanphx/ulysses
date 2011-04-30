@@ -1,3 +1,16 @@
+#ifndef KEYBOARD_H
+#define KEYBOARD_H
 
-void init_keyboard();
+#include "io.h"
+
+struct Keyboard {
+  IOPort io;
+
+  void pressed();
+  void init();
+};
+
+extern Keyboard keyboard;
+
+#endif
 

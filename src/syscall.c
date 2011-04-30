@@ -20,9 +20,9 @@ void sys_monitor_write_dec(int num) {
   console.write_dec(num);
 }
 
-DEFN_SYSCALL1(sys_monitor_write, 0, const char*);
-DEFN_SYSCALL1(sys_monitor_write_hex, 1, int);
-DEFN_SYSCALL1(sys_monitor_write_dec, 2, int);
+DEFN_SYSCALL1(monitor_write, 0, const char*);
+DEFN_SYSCALL1(monitor_write_hex, 1, int);
+DEFN_SYSCALL1(monitor_write_dec, 2, int);
 
 static void *syscalls[3] =
 {
