@@ -10,6 +10,10 @@
 
 #include "common.h"
 
+extern "C" {
+
+void set_kernel_stack(u32int stack);
+
 // Initialisation function is publicly accessible.
 void init_descriptor_tables();
 
@@ -151,4 +155,5 @@ extern void irq14();
 extern void irq15();
 extern void isr128();
 
+}
 #endif

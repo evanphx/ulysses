@@ -26,8 +26,8 @@ a few have provided the majority of the input and deserve special mention:
 typedef struct _PCI_VENTABLE
 {
 	unsigned short	VenId ;
-	char *	VenShort ;
-	char *	VenFull ;
+	const char*	VenShort ;
+	const char*	VenFull ;
 }  PCI_VENTABLE, *PPCI_VENTABLE ;
 
 PCI_VENTABLE	PciVenTable [] =
@@ -1578,8 +1578,8 @@ typedef struct _PCI_DEVTABLE
 {
 	unsigned short	VenId ;
 	unsigned short	DevId ;
-	char *	Chip ;
-	char *	ChipDesc ;
+	const char*	Chip ;
+	const char*	ChipDesc ;
 }  PCI_DEVTABLE, *PPCI_DEVTABLE ;
 
 PCI_DEVTABLE	PciDevTable [] =
@@ -8118,9 +8118,9 @@ typedef struct _PCI_CLASSCODETABLE
 	unsigned char	BaseClass ;
 	unsigned char	SubClass ;
 	unsigned char	ProgIf ;
-	char *		BaseDesc ;
-	char *		SubDesc ;
-	char *		ProgDesc ;
+	const char *		BaseDesc ;
+	const char *		SubDesc ;
+	const char *		ProgDesc ;
 }  PCI_CLASSCODETABLE, *PPCI_CLASSCODETABLE ;
 
 PCI_CLASSCODETABLE PciClassCodeTable [] =
@@ -8212,7 +8212,7 @@ PCI_CLASSCODETABLE PciClassCodeTable [] =
 // Use this value for loop control during searching:
 #define	PCI_CLASSCODETABLE_LEN	(sizeof(PciClassCodeTable)/sizeof(PCI_CLASSCODETABLE))
 
-char *	PciCommandFlags [] =
+const char *	PciCommandFlags [] =
 {
 	"I/O Access",
 	"Memory Access",
@@ -8236,7 +8236,7 @@ char *	PciCommandFlags [] =
 #define	PCI_COMMANDFLAGS_LEN	(sizeof(PciCommandFlags)/sizeof(char *))
 
 
-char *	PciStatusFlags [] =
+const char *	PciStatusFlags [] =
 {
 	"Reserved 0",
 	"Reserved 1",
@@ -8260,7 +8260,7 @@ char *	PciStatusFlags [] =
 #define	PCI_STATUSFLAGS_LEN	(sizeof(PciStatusFlags)/sizeof(char *))
 
 
-char *	PciDevSelFlags [] =
+const char *	PciDevSelFlags [] =
 {
 	"Fast Devsel Speed",     // TypeC
 	"Medium Devsel Speed",   // TypeB

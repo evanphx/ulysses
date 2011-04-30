@@ -16,8 +16,12 @@ typedef unsigned long mem_ptr_t;
 extern void kprintf(char* fmt, ...);
 extern void kabort();
 
+#ifndef IN_KERNEL
+
 extern void* memcpy(void* s, const void* d, int size);
 extern void* memset(void* b, int c, int len);
+
+#endif
 
 #define LWIP_ERR_T  int
 

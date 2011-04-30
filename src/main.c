@@ -14,6 +14,8 @@
 #include "pci.h"
 #include "rtc.h"
 
+extern "C" {
+
 extern u32int placement_address;
 u32int initial_esp;
 u32int initrd_location;
@@ -104,4 +106,6 @@ void main2() {
     for(;;) {
       asm volatile("hlt;");
     }
+}
+
 }

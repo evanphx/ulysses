@@ -4,6 +4,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+extern "C" {
+
 // Some nice typedefs, to standardise sizes across platforms.
 // These typedefs are written for 32-bit X86.
 typedef unsigned long long u64;
@@ -14,6 +16,12 @@ typedef unsigned short u16int;
 typedef          short s16int;
 typedef unsigned char  u8int;
 typedef          char  s8int;
+
+typedef unsigned short u16;
+typedef          short s16;
+
+typedef unsigned char u8;
+typedef          char s8;
 
 void outb(u16int port, u8int value);
 void outw(u16int port, u16int value);
@@ -29,6 +37,13 @@ u32int inl(u16int port);
 extern void panic(const char *message, const char *file, u32int line);
 extern void panic_assert(const char *file, u32int line, const char *desc);
 
+void memset(u8int *dest, u8int val, u32int len);
+void memcpy(u8int *dest, const u8int *src, u32int len);
+
+char *strcpy(char *dest, const char *src);
+int strlen(char *src);
+int strcmp(const char *str1, const char *str2);
+
 void kabort();
 
 int disable_interrupts();
@@ -42,4 +57,5 @@ void restore_interrupts(int status);
                   (((u32int)(A) & 0x000000ff) << 24))
 
 
+}
 #endif // COMMON_H

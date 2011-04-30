@@ -2,6 +2,9 @@
 //             From JamesM's kernel development tutorials.
 
 #include "common.h"
+#include "monitor.h"
+
+extern "C" {
 
 static int interrupts_on = 1;
 
@@ -75,7 +78,7 @@ void memset(u8int *dest, u8int val, u32int len)
 
 // Compare two strings. Should return -1 if 
 // str1 < str2, 0 if they are equal or 1 otherwise.
-int strcmp(char *str1, char *str2)
+int strcmp(const char *str1, const char *str2)
 {
       int i = 0;
       int failed = 0;
@@ -173,4 +176,6 @@ void kabort() {
   for(;;) {
     asm volatile("hlt;");
   }
+}
+
 }

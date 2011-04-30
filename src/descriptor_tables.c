@@ -9,6 +9,8 @@
 #include "descriptor_tables.h"
 #include "isr.h"
 
+extern "C" {
+
 // Lets us access our ASM functions from our C code.
 extern void gdt_flush(u32int);
 extern void idt_flush(u32int);
@@ -40,7 +42,7 @@ void init_descriptor_tables()
     // Initialise the interrupt descriptor table.
     init_idt();
     // Nullify all the interrupt handlers.
-    memset(&interrupt_handlers, 0, sizeof(isr_t)*256);
+    memset((u8int*)&interrupt_handlers, 0, sizeof(isr_t)*256);
 }
 
 static void init_gdt()
@@ -84,7 +86,7 @@ static void write_tss(s32int num, u16int ss0, u32int esp0)
     gdt_set_gate(num, base, limit, 0xE9, 0x00);
 
     // Ensure the descriptor is initially zero.
-    memset(&tss_entry, 0, sizeof(tss_entry));
+    memset((u8int*)&tss_entry, 0, sizeof(tss_entry));
 
     tss_entry.ss0  = ss0;  // Set the kernel stack segment.
     tss_entry.esp0 = esp0; // Set the kernel stack pointer.
@@ -109,7 +111,7 @@ static void init_idt()
     idt_ptr.limit = sizeof(idt_entry_t) * 256 -1;
     idt_ptr.base  = (u32int)&idt_entries;
 
-    memset(&idt_entries, 0, sizeof(idt_entry_t)*256);
+    memset((u8int*)&idt_entries, 0, sizeof(idt_entry_t)*256);
 
     // Remap the irq table.
     outb(0x20, 0x11);
@@ -184,4 +186,6 @@ static void idt_set_gate(u8int num, u32int base, u16int sel, u8int flags)
     idt_entries[num].sel     = sel;
     idt_entries[num].always0 = 0;
     idt_entries[num].flags   = flags  | 0x60;
+}
+
 }

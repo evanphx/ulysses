@@ -5,6 +5,10 @@
 
 #include "task.h"
 #include "paging.h"
+#include "kheap.h"
+#include "descriptor_tables.h"
+
+extern "C" {
 
 // The currently running task.
 volatile task_t *current_task;
@@ -74,7 +78,7 @@ void move_stack(void *new_stack_start, u32int size)
   int copy_size = initial_esp - old_stack_pointer;
 
   // Copy the stack.
-  memcpy((void*)new_stack_pointer, (void*)old_stack_pointer, copy_size);
+  memcpy((u8int*)new_stack_pointer, (u8int*)old_stack_pointer, copy_size);
 
   // Backtrace through the original stack, copying new values into
   // the new stack.
@@ -261,4 +265,6 @@ void switch_to_user_mode()
     1: \
       "); 
       
+}
+
 }

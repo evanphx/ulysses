@@ -9,6 +9,8 @@
 #include "common.h"
 #include "paging.h"
 
+extern "C" {
+
 #define KERNEL_STACK_SIZE 2048       // Use a 2kb kernel stack.
 
 // This structure defines a 'task' - a process.
@@ -37,5 +39,7 @@ void move_stack(void *new_stack_start, u32int size);
 
 // Returns the pid of the current process.
 int getpid();
+
+}
 
 #endif

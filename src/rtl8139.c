@@ -1,5 +1,9 @@
 #include "monitor.h"
 #include "isr.h"
+#include "eth.h"
+#include "kheap.h"
+
+#define IN_KERNEL
 
 #include "lwip/netif.h"
 #include "ipv4/lwip/ip.h"
@@ -385,7 +389,7 @@ void rtl8139_transmit(u32int io, u8int* buf, int size) {
   kputs("\n");
 
   kprintf("copy %p (%d) to %p\n", buf, size, rtl8139_tx_buffers[entry].virt);
-  memcpy(rtl8139_tx_buffers[entry].virt, buf, size);
+  memcpy((u8int*)rtl8139_tx_buffers[entry].virt, buf, size);
   outl(io + TxAddr0 + entry*4, rtl8139_tx_buffers[entry].phys);
   outl(io + TxStatus0 + entry*4, size & 0x1fff);
 
@@ -402,7 +406,7 @@ err_t rtl8139_input(struct pbuf* p, struct netif* netif) {
 }
 
 err_t rtl8139_link_output(struct netif* netif, struct pbuf* p) {
-  xmit_packet(p->payload, p->len);
+  xmit_packet((u8int*)p->payload, p->len);
 }
 
 err_t rtl8139_output(struct netif* nif, struct pbuf* p, struct ip_addr* dest) {
@@ -413,7 +417,7 @@ void init_rtl8139(u32int io, u8int irq) {
   rtl8139_io = io;
   rtl8139_irq = irq;
 
-  memset(&rtl8139_lwip_netif, 0, sizeof(struct netif));
+  memset((u8int*)&rtl8139_lwip_netif, 0, sizeof(struct netif));
 
   rtl8139_ipaddr.addr = inet_addr("10.0.2.15");
 
@@ -437,7 +441,7 @@ err_t rtl8139_open(struct netif* netif) {
 
   rtl8139_read_mac(io, rtl8139_mac);
 
-  memcpy(rtl8139_lwip_netif.hwaddr, rtl8139_mac, 6);
+  memcpy((u8int*)rtl8139_lwip_netif.hwaddr, (u8int*)rtl8139_mac, 6);
   rtl8139_lwip_netif.hwaddr_len = 6;
 
   monitor_write("Realtek 8139: MAC ");

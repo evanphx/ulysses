@@ -3,6 +3,9 @@
 
 #include "paging.h"
 #include "kheap.h"
+#include "monitor.h"
+
+extern "C" {
 
 // The kernel's page directory
 page_directory_t *kernel_directory=0;
@@ -115,12 +118,12 @@ void initialise_paging()
     
     nframes = mem_end_page / 0x1000;
     frames = (u32int*)kmalloc(INDEX_FROM_BIT(nframes));
-    memset(frames, 0, INDEX_FROM_BIT(nframes));
+    memset((u8int*)frames, 0, INDEX_FROM_BIT(nframes));
     
     // Let's make a page directory.
     u32int phys;
     kernel_directory = (page_directory_t*)kmalloc_a(sizeof(page_directory_t));
-    memset(kernel_directory, 0, sizeof(page_directory_t));
+    memset((u8int*)kernel_directory, 0, sizeof(page_directory_t));
     kernel_directory->physicalAddr = (u32int)kernel_directory->tablesPhysical;
 
     // Map some pages in the kernel heap area.
@@ -191,7 +194,7 @@ page_t *get_page(u32int address, int make, page_directory_t *dir)
     {
         u32int tmp;
         dir->tables[table_idx] = (page_table_t*)kmalloc_ap(sizeof(page_table_t), &tmp);
-        memset(dir->tables[table_idx], 0, 0x1000);
+        memset((u8int*)dir->tables[table_idx], 0, 0x1000);
         dir->tablesPhysical[table_idx] = tmp | 0x7; // PRESENT, RW, US.
         return &dir->tables[table_idx]->pages[address%1024];
     }
@@ -232,12 +235,14 @@ void page_fault(registers_t *regs)
     PANIC("Page fault");
 }
 
+void copy_page_physical(int, int);
+
 static page_table_t *clone_table(page_table_t *src, u32int *physAddr)
 {
     // Make a new page table, which is page aligned.
     page_table_t *table = (page_table_t*)kmalloc_ap(sizeof(page_table_t), physAddr);
     // Ensure that the new table is blank.
-    memset(table, 0, sizeof(page_directory_t));
+    memset((u8int*)table, 0, sizeof(page_directory_t));
 
     // For every entry in the table...
     int i;
@@ -266,7 +271,7 @@ page_directory_t *clone_directory(page_directory_t *src)
     // Make a new page directory and obtain its physical address.
     page_directory_t *dir = (page_directory_t*)kmalloc_ap(sizeof(page_directory_t), &phys);
     // Ensure that it is blank.
-    memset(dir, 0, sizeof(page_directory_t));
+    memset((u8int*)dir, 0, sizeof(page_directory_t));
 
     // Get the offset of tablesPhysical from the start of the page_directory_t structure.
     u32int offset = (u32int)dir->tablesPhysical - (u32int)dir;
@@ -296,4 +301,6 @@ page_directory_t *clone_directory(page_directory_t *src)
         }
     }
     return dir;
+}
+
 }

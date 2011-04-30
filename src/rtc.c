@@ -1,6 +1,7 @@
 #include "monitor.h"
 #include "timer.h"
 #include "rtc.h"
+#include "pit.h"
 
 #define SEC 0
 #define MIN 2

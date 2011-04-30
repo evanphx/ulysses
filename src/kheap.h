@@ -9,6 +9,8 @@
 #include "common.h"
 #include "ordered_array.h"
 
+extern "C" {
+
 #define KHEAP_START         0xC0000000
 #define KHEAP_INITIAL_SIZE  0x100000
 
@@ -98,5 +100,7 @@ u32int kmalloc(u32int sz);
    General deallocation function.
 **/
 void kfree(void *p);
+
+}
 
 #endif // KHEAP_H

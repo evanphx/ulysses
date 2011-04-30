@@ -8,6 +8,8 @@
 #include "isr.h"
 #include "monitor.h"
 
+extern "C" {
+
 isr_t interrupt_handlers[256];
 
 void register_interrupt_handler(u8int n, isr_t handler)
@@ -62,5 +64,7 @@ void irq_handler(registers_t regs)
         isr_t handler = interrupt_handlers[regs.int_no];
         handler(&regs);
     }
+
+}
 
 }

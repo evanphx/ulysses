@@ -7,6 +7,8 @@
 #include "common.h"
 #include "isr.h"
 
+extern "C" {
+
 typedef struct page
 {
     u32int present    : 1;   // Page present in memory
@@ -53,7 +55,7 @@ void initialise_paging();
    Causes the specified page directory to be loaded into the
    CR3 register.
 **/
-void switch_page_directory(page_directory_t *new);
+void switch_page_directory(page_directory_t *pt);
 
 /**
    Retrieves a pointer to the page required.
@@ -71,5 +73,10 @@ void page_fault(registers_t *regs);
    Makes a copy of a page directory.
 **/
 page_directory_t *clone_directory(page_directory_t *src);
+
+void alloc_frame(page_t *page, int is_kernel, int is_writeable);
+void free_frame(page_t *page);
+
+}
 
 #endif

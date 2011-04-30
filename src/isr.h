@@ -6,6 +6,8 @@
 
 #include "common.h"
 
+extern "C" {
+
 // A few defines to make life a little easier
 #define IRQ0 32
 #define IRQ1 33
@@ -38,3 +40,5 @@ typedef struct registers
 typedef void (*isr_t)(registers_t*);
 void register_isr_handler(u8int n, isr_t handler);
 void register_interrupt_handler(u8int n, isr_t handler);
+
+}

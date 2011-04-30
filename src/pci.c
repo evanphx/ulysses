@@ -13,8 +13,8 @@
 #define PCI_BAR_0 0x10
 #define PCI_IRQ 0x3c
 
-static const char* class2name(int class) {
-  switch(class) {
+static const char* class2name(int klass) {
+  switch(klass) {
   case 0x101:
     return "IDE Controller";
   case 0x200:
@@ -27,29 +27,29 @@ static const char* class2name(int class) {
     return "ISA Bridge";
   }
 
-  if(class >= 0x100 && class < 0x200) {
+  if(klass >= 0x100 && klass < 0x200) {
     return "Unknown Storage";
-  } else if(class >= 0x200 && class < 0x300) {
+  } else if(klass >= 0x200 && klass < 0x300) {
     return "Unknown Network";
-  } else if(class >= 0x300 && class < 0x400) {
+  } else if(klass >= 0x300 && klass < 0x400) {
     return "Unknown Display";
-  } else if(class >= 0x400 && class < 0x500) {
+  } else if(klass >= 0x400 && klass < 0x500) {
     return "Unknown Multimedia";
-  } else if(class >= 0x500 && class < 0x600) {
+  } else if(klass >= 0x500 && klass < 0x600) {
     return "Unknown Memory";
-  } else if(class >= 0x600 && class < 0x700) {
+  } else if(klass >= 0x600 && klass < 0x700) {
     return "Unknown Bridge";
-  } else if(class >= 0x700 && class < 0x800) {
+  } else if(klass >= 0x700 && klass < 0x800) {
     return "Unknown Comm";
-  } else if(class >= 0x800 && class < 0x900) {
+  } else if(klass >= 0x800 && klass < 0x900) {
     return "Unknown System";
-  } else if(class >= 0x900 && class < 0xa00) {
+  } else if(klass >= 0x900 && klass < 0xa00) {
     return "Unknown Input";
-  } else if(class >= 0xa00 && class < 0xb00) {
+  } else if(klass >= 0xa00 && klass < 0xb00) {
     return "Unknown Docking";
-  } else if(class >= 0xb00 && class < 0xc00) {
+  } else if(klass >= 0xb00 && klass < 0xc00) {
     return "Unknown Processor";
-  } else if(class >= 0xc00 && class < 0xd00) {
+  } else if(klass >= 0xc00 && klass < 0xd00) {
     return "Unknown Serial";
   }
 
@@ -81,7 +81,7 @@ static void pci_scan_bus() {
     u32int vendor_id = vendor & 0xffff;
     u32int device_id = vendor >> 16;
 
-    u32int class = pci_configl(0, device, PCI_CLASS_REVISION) >> 16;
+    u32int klass = pci_configl(0, device, PCI_CLASS_REVISION) >> 16;
 
     /* monitor_write("PCI Device: header="); */
     /* monitor_write_hex(header); */
@@ -89,7 +89,7 @@ static void pci_scan_bus() {
     monitor_write(":");
     monitor_write_hex(device_id);
     monitor_write(":");
-    monitor_write_hex(class);
+    monitor_write_hex(klass);
 
     monitor_write("  ");
 
@@ -124,7 +124,7 @@ static void pci_scan_bus() {
     }
 
     monitor_write(", ");
-    monitor_write(class2name(class));
+    monitor_write(class2name(klass));
 
     u8int irq = pci_configb(0, device, PCI_IRQ);
     u32int io_port = pci_configl(0, device, PCI_BAR_0) & ~3;

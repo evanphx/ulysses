@@ -2,6 +2,7 @@
 #include "arp.h"
 #include "eth.h"
 #include "rtl8139.h"
+#include "kheap.h"
 
 struct arp_header {
   u16int hardware;
@@ -63,15 +64,15 @@ void handle_arp(u8int* buf, int size) {
 
     struct eth_header* rep_hdr = (struct eth_header*)reply;
     memcpy(rep_hdr->dest, sha, 6);
-    memcpy(rep_hdr->src, eth_mac(), 6);
+    memcpy(rep_hdr->src, (u8int*)eth_mac(), 6);
     rep_hdr->proto = htons(PROTO_ARP);
 
     struct arp_header* rep_arp_hdr = (struct arp_header*)(rep_hdr + 1);
-    memcpy(rep_arp_hdr, hdr, sizeof(struct arp_header));
+    memcpy((u8int*)rep_arp_hdr, (u8int*)hdr, sizeof(struct arp_header));
     rep_arp_hdr->op = htons(ARP_REPLY);
 
     u8int* body = (u8int*)(rep_arp_hdr + 1);
-    memcpy(body + 0,  eth_mac(), 6);
+    memcpy((u8int*)body + 0,  (u8int*)eth_mac(), 6);
     memcpy(body + 6,  tpa, 4);
     memcpy(body + 10, sha, 6);
     memcpy(body + 16, spa, 4);

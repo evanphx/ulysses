@@ -6,6 +6,8 @@
 #include "kheap.h"
 #include "paging.h"
 
+extern "C" {
+
 // end is defined in the linker script.
 extern u32int end;
 u32int placement_address = (u32int)&end;
@@ -64,7 +66,7 @@ void* kmalloc_vp(int sz) {
 
 void* krealloc_vp(void* ptr, int sz) {
   void* new_ptr = kmalloc_vp(sz);
-  memcpy(new_ptr, ptr, sz);
+  memcpy((u8int*)new_ptr, (const u8int*)ptr, sz);
   return new_ptr;
 }
 
@@ -260,7 +262,7 @@ void *alloc(u32int size, u8int page_align, heap_t *heap)
         else
         {
             // The last header needs adjusting.
-            header_t *header = lookup_ordered_array(idx, &heap->index);
+            header_t *header = (header_t*)lookup_ordered_array(idx, &heap->index);
             header->size += new_length - old_length;
             // Rewrite the footer.
             footer_t *footer = (footer_t *) ( (u32int)header + header->size - sizeof(footer_t) );
@@ -422,5 +424,7 @@ void free(void *p, heap_t *heap)
     // If required, add us to the index.
     if (do_add == 1)
         insert_ordered_array((void*)header, &heap->index);
+
+}
 
 }

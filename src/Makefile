@@ -5,16 +5,16 @@
 
 SOURCES=boot.o main.o monitor.o common.o descriptor_tables.o isr.o interrupt.o gdt.o timer.o \
         kheap.o paging.o ordered_array.o fs.o initrd.o task.o process.o syscall.o \
-				keyboard.o pci.o rtl8139.o eth.o arp.o ip.o rtc.o pit.o
+				keyboard.o pci.o rtl8139.o eth.o arp.o rtc.o pit.o
 
-OPT=-O0 -fno-inline
+OPT=-m32 -O0 -fno-inline
 CFLAGS=$(OPT) -nostdlib -fno-builtin -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip
-LIBGCC=`$(CC) -print-libgcc-file-name`
-LDFLAGS=-Tlink.ld
+LIBGCC=`i386-elf-gcc -print-libgcc-file-name`
+LDFLAGS=--oformat=elf32-i386 -melf_i386 -Tlink.ld
 ASFLAGS=-felf
 
-CC=i386-elf-gcc
-LD=i386-elf-ld
+CC=x86_64-elf-g++
+LD=x86_64-elf-ld
 
 all: $(SOURCES) link
 

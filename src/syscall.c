@@ -14,9 +14,9 @@ DEFN_SYSCALL1(monitor_write_dec, 2, const char*);
 
 static void *syscalls[3] =
 {
-    &monitor_write,
-    &monitor_write_hex,
-    &monitor_write_dec,
+    (void*)&monitor_write,
+    (void*)&monitor_write_hex,
+    (void*)&monitor_write_dec,
 };
 u32int num_syscalls = 3;
 

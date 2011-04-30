@@ -14,7 +14,7 @@ LWIPARCH=$(TOPDIR)/arch
 #default assumes it's a dir named lwip at the same level as the contrib module
 LWIPDIR=$(TOPDIR)/src
 
-CFLAGS += -Wall -Werror $(CPPFLAGS) -I$(LWIPDIR)/include -I.              \
+CFLAGS += -m32 -Wall -Werror $(CPPFLAGS) -I$(LWIPDIR)/include -I.              \
     -I$(LWIPARCH) \
     -I$(LWIPDIR)/include/ipv4
 
