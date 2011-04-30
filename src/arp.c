@@ -25,17 +25,17 @@ void handle_arp(u8int* buf, int size) {
   u16int hlen = hdr->hardware_len;
   u16int plen = hdr->proto_len;
 
-  monitor_write("ARP packet:  htype=");
-  monitor_write_hex(htons(hdr->hardware));
-  monitor_write(" proto=");
-  monitor_write_hex(htons(hdr->proto));
-  monitor_write(" hlen=");
-  monitor_write_hex(hdr->hardware_len);
-  monitor_write(" plen=");
-  monitor_write_hex(hdr->proto_len);
-  monitor_write(" op=");
-  monitor_write(htons(hdr->op) == ARP_REQUEST ? "request" : "reply");
-  monitor_write("\n");
+  console.write("ARP packet:  htype=");
+  console.write_hex(htons(hdr->hardware));
+  console.write(" proto=");
+  console.write_hex(htons(hdr->proto));
+  console.write(" hlen=");
+  console.write_hex(hdr->hardware_len);
+  console.write(" plen=");
+  console.write_hex(hdr->proto_len);
+  console.write(" op=");
+  console.write(htons(hdr->op) == ARP_REQUEST ? "request" : "reply");
+  console.write("\n");
 
   if(htons(hdr->hardware) == ARP_ETHER &&
       htons(hdr->proto) == PROTO_IP) {
@@ -45,19 +45,19 @@ void handle_arp(u8int* buf, int size) {
     u8int* tha = spa + plen;
     u8int* tpa = tha + hlen;
 
-    monitor_write("sender: ");
+    console.write("sender: ");
     print_mac(sha);
-    monitor_write(" - ");
+    console.write(" - ");
     print_ipv4(spa);
 
-    monitor_write("\n");
+    console.write("\n");
 
-    monitor_write("target: ");
+    console.write("target: ");
     print_mac(tha);
-    monitor_write(" - ");
+    console.write(" - ");
     print_ipv4(tpa);
 
-    monitor_write("\n");
+    console.write("\n");
 
     int rep_size = sizeof(struct eth_header) + sizeof(struct arp_header) + 6+4+6+4;
     u8int* reply = (u8int*)kmalloc_a(rep_size);

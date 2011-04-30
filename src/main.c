@@ -28,20 +28,20 @@ static void show_cpuid() {
 
   asm volatile("cpuid" : "=b"(ebx),"=d"(edx),"=c"(ecx) : "a"(code));
 
-  monitor_write("CPUID: ");
-  monitor_put((ebx & 0x000000ff) >> 0);
-  monitor_put((ebx & 0x0000ff00) >> 8);
-  monitor_put((ebx & 0x00ff0000) >> 16);
-  monitor_put((ebx & 0xff000000) >> 24);
-  monitor_put((edx & 0x000000ff) >> 0);
-  monitor_put((edx & 0x0000ff00) >> 8);
-  monitor_put((edx & 0x00ff0000) >> 16);
-  monitor_put((edx & 0xff000000) >> 24);
-  monitor_put((ecx & 0x000000ff) >> 0);
-  monitor_put((ecx & 0x0000ff00) >> 8);
-  monitor_put((ecx & 0x00ff0000) >> 16);
-  monitor_put((ecx & 0xff000000) >> 24);
-  monitor_write("\n");
+  console.write("CPUID: ");
+  console.put((ebx & 0x000000ff) >> 0);
+  console.put((ebx & 0x0000ff00) >> 8);
+  console.put((ebx & 0x00ff0000) >> 16);
+  console.put((ebx & 0xff000000) >> 24);
+  console.put((edx & 0x000000ff) >> 0);
+  console.put((edx & 0x0000ff00) >> 8);
+  console.put((edx & 0x00ff0000) >> 16);
+  console.put((edx & 0xff000000) >> 24);
+  console.put((ecx & 0x000000ff) >> 0);
+  console.put((ecx & 0x0000ff00) >> 8);
+  console.put((ecx & 0x00ff0000) >> 16);
+  console.put((ecx & 0xff000000) >> 24);
+  console.write("\n");
 }
 
 /* static inline void rdtsc(dword *upper, dword *lower) { */
@@ -54,8 +54,8 @@ int main(struct multiboot *mboot_ptr, u32int initial_stack)
     // Initialise all the ISRs and segmentation
     init_descriptor_tables();
     // Initialise the screen (by clearing it)
-    // monitor_clear();
-    monitor_setup();
+    // console.clear();
+    console.setup();
 
     // Initialise the PIT to 100Hz
     asm volatile("sti");
@@ -70,10 +70,10 @@ int main(struct multiboot *mboot_ptr, u32int initial_stack)
     // Don't trample our module with placement accesses, please!
     placement_address = initrd_end;
 
-    monitor_write("initrd: ");
-    monitor_write_hex(initrd_location);
-    monitor_write("-");
-    monitor_write_hex(initrd_end-1);
+    console.write("initrd: ");
+    console.write_hex(initrd_location);
+    console.write("-");
+    console.write_hex(initrd_end-1);
     // Start paging.
     initialise_paging();
 
@@ -98,7 +98,7 @@ void main2() {
 
     init_pci();
 
-    /* monitor_write("Switching to user mode.\n"); */
+    /* console.write("Switching to user mode.\n"); */
     /* switch_to_user_mode(); */
 
     /* syscall_monitor_write("Hello, user world!\n"); */

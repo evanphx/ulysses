@@ -69,7 +69,7 @@ static u32int pci_configl(u8int bus, u8int device, u8int var) {
 static void pci_scan_bus() {
   int device;
 
-  monitor_write("Scanning PCI bus:\n");
+  console.write("Scanning PCI bus:\n");
 
   for(device = 0; device < 0xff; device++) {
     u32int header = pci_configb(0, device, PCI_HEADER_VAR);
@@ -83,58 +83,58 @@ static void pci_scan_bus() {
 
     u32int klass = pci_configl(0, device, PCI_CLASS_REVISION) >> 16;
 
-    /* monitor_write("PCI Device: header="); */
-    /* monitor_write_hex(header); */
-    monitor_write_hex(vendor_id);
-    monitor_write(":");
-    monitor_write_hex(device_id);
-    monitor_write(":");
-    monitor_write_hex(klass);
+    /* console.write("PCI Device: header="); */
+    /* console.write_hex(header); */
+    console.write_hex(vendor_id);
+    console.write(":");
+    console.write_hex(device_id);
+    console.write(":");
+    console.write_hex(klass);
 
-    monitor_write("  ");
+    console.write("  ");
 
     int found_vendor = 0;
 
     int i;
     for(i = 0; i < PCI_VENTABLE_LEN; i++) {
       if(PciVenTable[i].VenId == vendor_id) {
-        monitor_write(PciVenTable[i].VenShort);
+        console.write(PciVenTable[i].VenShort);
         found_vendor = 1;
       }
     }
 
     if(!found_vendor) {
-      monitor_write("Unknown vendor");
+      console.write("Unknown vendor");
     }
 
-    monitor_write(", ");
+    console.write(", ");
 
     int found_device = 1;
 
     for(i = 0; i < PCI_DEVTABLE_LEN; i++) {
       if(PciDevTable[i].VenId == vendor_id &&
           PciDevTable[i].DevId == device_id) {
-        monitor_write(PciDevTable[i].Chip);
+        console.write(PciDevTable[i].Chip);
         found_device = 1;
       }
     }
 
     if(!found_device) {
-      monitor_write("Unknown device");
+      console.write("Unknown device");
     }
 
-    monitor_write(", ");
-    monitor_write(class2name(klass));
+    console.write(", ");
+    console.write(class2name(klass));
 
     u8int irq = pci_configb(0, device, PCI_IRQ);
     u32int io_port = pci_configl(0, device, PCI_BAR_0) & ~3;
 
-    monitor_write(" irq=");
-    monitor_write_dec(irq);
-    monitor_write(", io=");
-    monitor_write_hex(io_port);
+    console.write(" irq=");
+    console.write_dec(irq);
+    console.write(", io=");
+    console.write_hex(io_port);
 
-    monitor_write("\n");
+    console.write("\n");
 
     if(device_id == 0x8139) {
       init_rtl8139(io_port, irq);
@@ -149,7 +149,7 @@ void init_pci() {
   outl(0xCF8, 0x80000000);
 
   if (inl (0xCF8) == 0x80000000) {
-    monitor_write("Detected PCI access.\n");
+    console.write("Detected PCI access.\n");
   }
 
   outl(0xCF8, val);

@@ -17,6 +17,9 @@ typedef          short s16int;
 typedef unsigned char  u8int;
 typedef          char  s8int;
 
+typedef unsigned int u32;
+typedef          int s32;
+
 typedef unsigned short u16;
 typedef          short s16;
 

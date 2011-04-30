@@ -56,7 +56,7 @@ void init_clock() {
     year -= 1;
   }
 
-  kprintf("sec: %d, min: %d, hour: %d, day: %d, mon: %d, year: %d\n",
+  console.printf("sec: %d, min: %d, hour: %d, day: %d, mon: %d, year: %d\n",
           sec, min, hour, day, mon, year);
 
   unsigned int year_day = 
@@ -68,7 +68,7 @@ void init_clock() {
 
   unsigned int epoch = sec + 60 * (min + 60 * (hour + 24 * year_day));
 
-  kprintf("epoch: %d\n", epoch);
+  console.printf("epoch: %d\n", epoch);
 
   cur_sec = epoch;
   cur_usec = 0;
@@ -79,12 +79,12 @@ void init_clock() {
     pit_timeRDTSC(&cycle_per_sec);
   }
 
-  kprintf("rdtsc cycle/sec: %llu\n", cycle_per_sec);
+  console.printf("rdtsc cycle/sec: %llu\n", cycle_per_sec);
 
   last_rdtsc = rdtsc();
   
   /* u64 tsc20 = pit_timeRDTSC(); */
-  /* kprintf("tsc20: %lld\n", tsc20); */
+  /* console.printf("tsc20: %lld\n", tsc20); */
 }
 
 void update_clock() {
@@ -95,15 +95,15 @@ void update_clock() {
     cur_usec -= 1000000;
     cur_sec++;
     kputs("time: ");
-    monitor_write_dec(cur_sec);
-    kprintf(".%d\n", cur_usec);
+    console.write_dec(cur_sec);
+    console.printf(".%d\n", cur_usec);
 
     u64 diff_tsc = cur_rdtsc - last_rdtsc;
-    kprintf("diff_tsc: %lld, ", diff_tsc);
+    console.printf("diff_tsc: %lld, ", diff_tsc);
     if(diff_tsc > cycle_per_sec) {
-      kprintf("against cps: %lld\n", diff_tsc - cycle_per_sec);
+      console.printf("against cps: %lld\n", diff_tsc - cycle_per_sec);
     } else {
-      kprintf("against cps: %lld\n", cycle_per_sec - diff_tsc);
+      console.printf("against cps: %lld\n", cycle_per_sec - diff_tsc);
     }
     last_rdtsc = cur_rdtsc;
   }

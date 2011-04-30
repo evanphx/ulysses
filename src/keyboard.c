@@ -8,9 +8,7 @@ static void keyboard_callback(registers_t* regs) {
   if(code & 0x80) {
     // handle press
   } else {
-    monitor_write("keypress: ");
-    monitor_write_dec(code);
-    monitor_write("\n");
+    console.printf("keypress: %d\n", code);
   }
 }
 

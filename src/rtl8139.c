@@ -237,16 +237,16 @@ static void rtl8139_reset(u32int io) {
   int i = 0;
   outb(io + ChipCmd, CmdReset);
 
-  monitor_write("rtl8139: Resetting...");
+  console.write("rtl8139: Resetting...");
   for(;;) {
     u8int byte = inb(io + ChipCmd);
     if((byte & CmdReset) == 0) {
-      monitor_write("reset\n");
+      console.write("reset\n");
       return;
     }
   }
 
-  monitor_write("rtl8139: Timeout resetting.\n");
+  console.write("rtl8139: Timeout resetting.\n");
 }
 
 static void rtl8139_enable_tx_rx(u32int io) {
@@ -318,39 +318,39 @@ static void rtl8139_receive(u32int io, u16int status) {
     u32int rx_status = *buf_start;
     int rx_size = rx_status >> 16;
 
-    monitor_write("rtl8139: receive: buf_addr=");
-    monitor_write_hex(buf_addr);
-    monitor_write(", buf_ptr=");
-    monitor_write_hex(buf_ptr);
-    monitor_write(", cmd=");
-    monitor_write_hex(cmd);
-    monitor_write(", rx_status=");
-    monitor_write_hex(rx_status);
-    monitor_write(", rx_size=");
-    monitor_write_dec(rx_size);
-    monitor_write("\n");
+    console.write("rtl8139: receive: buf_addr=");
+    console.write_hex(buf_addr);
+    console.write(", buf_ptr=");
+    console.write_hex(buf_ptr);
+    console.write(", cmd=");
+    console.write_hex(cmd);
+    console.write(", rx_status=");
+    console.write_hex(rx_status);
+    console.write(", rx_size=");
+    console.write_dec(rx_size);
+    console.write("\n");
 
-    monitor_write("rtl8139: ring buffer=");
-    monitor_write_hex((u32int)buf_start);
-    monitor_write(" size=");
-    monitor_write_dec(rx_size);
-    monitor_write(" cur_rx=");
-    monitor_write_dec(rtl8139_cur_rx);
-    monitor_write(" offset=");
-    monitor_write_dec(offset);
+    console.write("rtl8139: ring buffer=");
+    console.write_hex((u32int)buf_start);
+    console.write(" size=");
+    console.write_dec(rx_size);
+    console.write(" cur_rx=");
+    console.write_dec(rtl8139_cur_rx);
+    console.write(" offset=");
+    console.write_dec(offset);
     kputs("\n");
 
     if(rx_status & RxErrors) {
-      monitor_write("rtl8139: Detected frame errors.\n");
+      console.write("rtl8139: Detected frame errors.\n");
     } else {
       /*
-      monitor_write("Frame:\n");
+      console.write("Frame:\n");
       for(i = 4; i < rx_size; i++) {
-        monitor_write(" ");
-        monitor_write_hex_byte(u8buf_start[i]);
+        console.write(" ");
+        console.write_hex_byte(u8buf_start[i]);
       }
 
-      monitor_write("\n");
+      console.write("\n");
       */
 
       struct pbuf* pkt = pbuf_alloc(PBUF_RAW, rx_size, PBUF_RAM);
@@ -385,10 +385,10 @@ void rtl8139_transmit(u32int io, u8int* buf, int size) {
   int entry = rtl8139_tx_desc;
 
   kputs("rtl8139: Writing to tx descriptor: ");
-  monitor_write_dec(entry);
+  console.write_dec(entry);
   kputs("\n");
 
-  kprintf("copy %p (%d) to %p\n", buf, size, rtl8139_tx_buffers[entry].virt);
+  console.printf("copy %p (%d) to %p\n", buf, size, rtl8139_tx_buffers[entry].virt);
   memcpy((u8int*)rtl8139_tx_buffers[entry].virt, buf, size);
   outl(io + TxAddr0 + entry*4, rtl8139_tx_buffers[entry].phys);
   outl(io + TxStatus0 + entry*4, size & 0x1fff);
@@ -444,13 +444,13 @@ err_t rtl8139_open(struct netif* netif) {
   memcpy((u8int*)rtl8139_lwip_netif.hwaddr, (u8int*)rtl8139_mac, 6);
   rtl8139_lwip_netif.hwaddr_len = 6;
 
-  monitor_write("Realtek 8139: MAC ");
+  console.write("Realtek 8139: MAC ");
   for(i = 0; i < 6; i++) {
-    monitor_write_hex_np(rtl8139_mac[i]);
-    if(i != 5) monitor_write(":");
+    console.write_hex_np(rtl8139_mac[i]);
+    if(i != 5) console.write(":");
   }
 
-  monitor_write("\n");
+  console.write("\n");
 
   rtl8139_unlock(io);
   rtl8139_pm_wakeup(io);
@@ -463,11 +463,11 @@ err_t rtl8139_open(struct netif* netif) {
   u32int phys_rx_ring = 0;
   u32int virt_rx_ring = kmalloc_ap(default_rx_buf_len + 16, &phys_rx_ring);
 
-  monitor_write("rtl8139: phys=");
-  monitor_write_hex(phys_rx_ring);
-  monitor_write(" virt=");
-  monitor_write_hex(virt_rx_ring);
-  monitor_write("\n");
+  console.write("rtl8139: phys=");
+  console.write_hex(phys_rx_ring);
+  console.write(" virt=");
+  console.write_hex(virt_rx_ring);
+  console.write("\n");
 
   rtl8139_set_rx_buffer(io, phys_rx_ring);
   rtl8139_rx_buffer = virt_rx_ring;

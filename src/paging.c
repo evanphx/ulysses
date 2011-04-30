@@ -220,18 +220,18 @@ void page_fault(registers_t *regs)
     int id = regs->err_code & 0x10;          // Caused by an instruction fetch?
 
     // Output an error message.
-    monitor_write("Page fault! ( ");
-    if (present) {monitor_write("present ");}
-    if (rw) {monitor_write("read-only ");}
-    if (us) {monitor_write("user-mode ");}
-    if (reserved) {monitor_write("reserved ");}
-    monitor_write(") at ");
-    monitor_write_hex(faulting_address);
-    monitor_write(" - EIP: ");
-    monitor_write_hex(regs->eip);
-    monitor_write(" - ESP: ");
-    monitor_write_hex(regs->esp);
-    monitor_write("\n");
+    console.write("Page fault! ( ");
+    if (present) {console.write("present ");}
+    if (rw) {console.write("read-only ");}
+    if (us) {console.write("user-mode ");}
+    if (reserved) {console.write("reserved ");}
+    console.write(") at ");
+    console.write_hex(faulting_address);
+    console.write(" - EIP: ");
+    console.write_hex(regs->eip);
+    console.write(" - ESP: ");
+    console.write_hex(regs->esp);
+    console.write("\n");
     PANIC("Page fault");
 }
 

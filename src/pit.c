@@ -125,7 +125,7 @@ restart:
   do {
     intermediate = get_PIT2(&timerValue);
     if(timerValue > lastValue) {
-      kprintf("Hey we are going backwards! %u -> %u, restarting timing\n",
+      console.printf("Hey we are going backwards! %u -> %u, restarting timing\n",
               timerValue, lastValue);
       set_PIT2(0);
       disable_PIT2();

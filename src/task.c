@@ -105,9 +105,9 @@ void move_stack(void *new_stack_start, u32int size)
 
     /* u32int esp; */
     /* asm volatile("mov %%esp, %0" : "=r" (esp)); */
-    /* monitor_write("checked stack to: "); */
-    /* monitor_write_hex(esp); */
-    /* monitor_write("\n"); */
+    /* console.write("checked stack to: "); */
+    /* console.write_hex(esp); */
+    /* console.write("\n"); */
 }
 
 void switch_task()
