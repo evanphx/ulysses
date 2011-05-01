@@ -10,7 +10,7 @@ VirtualMemory vmem = {0, 0, 0, 0};
 extern "C" {
   // Defined in kheap.c
   extern u32 placement_address;
-  extern heap_t *kheap;
+  extern Heap* kheap;
 }
 
 // Function to allocate a frame.
@@ -121,7 +121,7 @@ void VirtualMemory::init() {
   switch_page_directory(kernel_directory);
 
   // Initialise the kernel heap.
-  kheap = create_heap(KHEAP_START, KHEAP_START+KHEAP_INITIAL_SIZE, 0xCFFFF000, 0, 0);
+  kheap = Heap::create(KHEAP_START, KHEAP_START+KHEAP_INITIAL_SIZE, 0xCFFFF000, 0, 0);
 
   current_directory = clone_directory(kernel_directory);
   switch_page_directory(current_directory);

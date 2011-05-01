@@ -7,53 +7,75 @@
 
 #include "common.h"
 
-/**
-   This array is insertion sorted - it always remains in a sorted state (between calls).
-   It can store anything that can be cast to a void* -- so a u32int, or any pointer.
-**/
-typedef void* type_t;
-/**
-   A predicate should return nonzero if the first argument is less than the second. Else 
-   it should return zero.
-**/
-typedef s8int (*lessthan_predicate_t)(type_t,type_t);
-typedef struct
-{
-    type_t *array;
-    u32int size;
-    u32int max_size;
-    lessthan_predicate_t less_than;
-} ordered_array_t;
+template <typename T, typename sorter>
+struct ordered_array {
+  T* array;
+  u32 size;
+  u32 max_size;
 
-/**
-   A standard less than predicate.
-**/
-s8int standard_lessthan_predicate(type_t a, type_t b);
+  void destroy() {
+    // kfree(array->array);
+  }
 
-/**
-   Create an ordered array.
-**/
-ordered_array_t create_ordered_array(u32int max_size, lessthan_predicate_t less_than);
-ordered_array_t place_ordered_array(void *addr, u32int max_size, lessthan_predicate_t less_than);
+  void insert(T item) {
+    u32 iterator = 0;
+    while(iterator < size && sorter::less_than(array[iterator], item)) {
+      iterator++;
+    }
 
-/**
-   Destroy an ordered array.
-**/
-void destroy_ordered_array(ordered_array_t *array);
+    if(iterator == size) { // just add at the end of the array.
+      array[size++] = item;
+    } else {
+      T tmp = array[iterator];
+      array[iterator] = item;
+      while(iterator < size) {
+        iterator++;
+        T tmp2 = array[iterator];
+        array[iterator] = tmp;
+        tmp = tmp2;
+      }
+      size++;
+    }
+  }
 
-/**
-   Add an item into the array.
-**/
-void insert_ordered_array(type_t item, ordered_array_t *array);
+  T lookup(u32 i) {
+    ASSERT(i < size);
+    return array[i];
+  }
 
-/**
-   Lookup the item at index i.
-**/
-type_t lookup_ordered_array(u32int i, ordered_array_t *array);
+  void remove(u32 i) {
+    while(i < size) {
+      array[i] = array[i+1];
+      i++;
+    }
+    size--;
+  }
 
-/**
-   Deletes the item at location i from the array.
-**/
-void remove_ordered_array(u32int i, ordered_array_t *array);
+  static bool less_than(T a, T b) {
+    return a < b;
+  }
+};
+
+extern "C" u32int kmalloc(u32int sz);
+
+template <typename T, typename S>
+ordered_array<T,S> create_ordered_array(u32 max_size) {
+  ordered_array<T,S> to_ret;
+  to_ret.array = (void**)kmalloc(max_size*sizeof(T));
+  memset((u8int*)to_ret.array, 0, max_size*sizeof(T));
+  to_ret.size = 0;
+  to_ret.max_size = max_size;
+  return to_ret;
+}
+
+template <typename T, typename S>
+ordered_array<T,S> place_ordered_array(void *addr, u32 max_size) {
+  ordered_array<T,S> to_ret;
+  to_ret.array = (T*)addr;
+  memset((u8int*)to_ret.array, 0, max_size*sizeof(T));
+  to_ret.size = 0;
+  to_ret.max_size = max_size;
+  return to_ret;
+}
 
 #endif // ORDERED_ARRAY_H

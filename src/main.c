@@ -91,8 +91,6 @@ int kmain(struct multiboot *mboot_ptr, u32int initial_stack)
     : : "r" (sp));
 }
 
-void switch_to_user_mode();
-
 void kmain2() {
   // Initialise the initial ramdisk, and set it as the filesystem root.
   fs_root = initialise_initrd(initrd_location);
@@ -104,9 +102,9 @@ void kmain2() {
   pci_bus.init();
 
   //console.write("Switching to user mode.\n");
-  scheduler.switch_to_user_mode();
+  // scheduler.switch_to_user_mode();
 
-  syscall_monitor_write("Hello, user world!\n");
+  // syscall_monitor_write("Hello, user world!\n");
 
   cpu::halt_loop();
 }
