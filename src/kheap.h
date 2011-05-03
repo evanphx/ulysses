@@ -106,4 +106,25 @@ void kfree(void *p);
 
 }
 
+template <typename T>
+T* knew() {
+  T* ptr = (T*)kmalloc(sizeof(T));
+  new(ptr) T();
+  return ptr;
+}
+
+template <typename T>
+T* knew_array(int size) {
+  int max = sizeof(T) * size;
+  char* ptr = (char*)kmalloc(max);
+
+  for(char* i = ptr; i < ptr + max; i += sizeof(T)) {
+    T* o = (T*)i;
+    new(o) T();
+  }
+
+  return (T*)ptr;
+}
+
+
 #endif // KHEAP_H

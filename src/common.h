@@ -4,6 +4,9 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+// Make placement new work!
+inline void* operator new(unsigned int, void* __p) throw() { return __p; }
+
 extern "C" {
 
 // Some nice typedefs, to standardise sizes across platforms.

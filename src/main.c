@@ -93,7 +93,9 @@ int kmain(struct multiboot *mboot_ptr, u32int initial_stack)
 
 void kmain2() {
   // Initialise the initial ramdisk, and set it as the filesystem root.
-  fs_root = initialise_initrd(initrd_location);
+  fs_root = initrd::fs.init(initrd_location);
+
+  console.printf("Initrd entries: %d\n", initrd::fs.nroot_nodes);
 
   keyboard.init();
 
