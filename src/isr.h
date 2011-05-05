@@ -4,9 +4,10 @@
 //          Rewritten for JamesM's kernel development tutorials.
 //
 
-#include "common.h"
+#ifndef ISR_H
+#define ISR_H
 
-extern "C" {
+#include "common.h"
 
 // A few defines to make life a little easier
 #define IRQ0 32
@@ -28,10 +29,10 @@ extern "C" {
 
 typedef struct registers
 {
-    u32int ds;                  // Data segment selector
-    u32int edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha.
-    u32int int_no, err_code;    // Interrupt number and error code (if applicable)
-    u32int eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
+    u32 ds;                  // Data segment selector
+    u32 edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha.
+    u32 int_no, err_code;    // Interrupt number and error code (if applicable)
+    u32 eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
 } registers_t;
 
 // Enables registration of callbacks for interrupts or IRQs.
@@ -41,4 +42,4 @@ typedef void (*isr_t)(registers_t*);
 void register_isr_handler(u8int n, isr_t handler);
 void register_interrupt_handler(u8int n, isr_t handler);
 
-}
+#endif

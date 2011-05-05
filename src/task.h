@@ -13,9 +13,13 @@
 
 // This structure defines a 'task' - a process.
 struct Task {
+  struct SavedRegisters {
+    u32 eip, esp, ebp;
+    u32 edi, esi, ebx;
+  };
+
   int id;              // Process ID.
-  u32 esp, ebp;       // Stack and base pointers.
-  u32 eip;            // Instruction pointer.
+  SavedRegisters regs;
   page_directory* directory; // Page directory.
   u32int kernel_stack;   // Kernel stack location.
   Task *next;     // The next task in a linked list.
@@ -30,6 +34,8 @@ struct Scheduler {
 
   void switch_task();
   int fork();
+
+  void exit();
 
   int getpid();
 

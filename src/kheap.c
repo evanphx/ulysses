@@ -6,12 +6,30 @@
 #include "kheap.h"
 #include "paging.h"
 
+Heap* kheap = 0;
+
+/*
+Allocation Heap::allocate(u32 size, int align=0) {
+  if(align && sz < 0x1000) {
+    sz = 0x1000;
+  }
+
+  void *addr = kheap->alloc(sz, (u8)align);
+
+  page *page = vmem.get_kernel_page((u32)addr, 0);
+  void* phys = page->frame*0x1000 + ((u32)addr&0xFFF);
+
+  Allocation alloc = {addr, phys};
+
+  return alloc;
+}
+*/
+
 extern "C" {
 
 // end is defined in the linker script.
 extern u32 end;
 u32 placement_address = (u32)&end;
-Heap* kheap = 0;
 
 u32 kmalloc_int(u32 sz, int align, u32 *phys) {
   if(kheap != 0) {
@@ -246,7 +264,7 @@ void* Heap::alloc(u32 size, u8 page_align) {
 
   // Here we work out if we should split the hole we found into two parts.
   // Is the original hole size - requested hole size less than the overhead for adding a new hole?
-  if(orig_hole_size-new_size < sizeof(Heap::header)+sizeof(Heap::footer)) {
+  if(orig_hole_size - new_size < sizeof(Heap::header) + sizeof(Heap::footer)) {
     // Then just increase the requested size to the size of the hole we found.
     size += orig_hole_size-new_size;
     new_size = orig_hole_size;

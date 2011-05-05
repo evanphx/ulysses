@@ -13,20 +13,21 @@
 #include "keyboard.h"
 #include "pci.h"
 #include "rtc.h"
+#include "elf.h"
 
 #include "cpu.h"
 
 extern "C" {
 
-extern u32int placement_address;
-u32int initial_esp;
-u32int initrd_location;
+extern u32 placement_address;
+u32 initial_esp;
+u32 initrd_location;
 
 void kmain2();
 
 static void show_cpuid() {
-  u32int ebx, edx, ecx;
-  u32int code = 0;
+  u32 ebx, edx, ecx;
+  u32 code = 0;
 
   asm volatile("cpuid" : "=b"(ebx),"=d"(edx),"=c"(ecx) : "a"(code));
 
@@ -50,14 +51,35 @@ static void show_cpuid() {
   /* asm volatile("rdtsc\n" : "=a"(*lower), "=d"(*upper)); */
 /* } */
 
-int kmain(struct multiboot *mboot_ptr, u32int initial_stack)
+int kmain(struct multiboot *mboot_ptr, u32 initial_stack)
 {
+    u32 cur_esp;
+    asm volatile("mov %%esp, %0" : "=r" (cur_esp));
+
     initial_esp = initial_stack;
     // Initialise all the ISRs and segmentation
     init_descriptor_tables();
     // Initialise the screen (by clearing it)
     // console.clear();
     console.setup();
+
+    console.printf("ESP: %x, %x\n", cur_esp, initial_stack);
+
+    u32 mem_total;
+    if(mboot_ptr->flags & 1) {
+      mem_total = (mboot_ptr->mem_lower * 1024) +
+                  (mboot_ptr->mem_upper * 1024);
+
+      if(mem_total > 1048576) {
+        console.printf("mem total: %dMB\n", mem_total / 1048576);
+      } else {
+        console.printf("mem total: %dB\n", mem_total);
+      }
+
+    } else {
+      console.printf("memory unknown, default to 16M\n");
+      mem_total = 0x1000000;
+    }
 
     // Initialise the PIT to 100Hz
     cpu::interrupts_on = 1;
@@ -69,20 +91,20 @@ int kmain(struct multiboot *mboot_ptr, u32int initial_stack)
 
     // Find the location of our initial ramdisk.
     ASSERT(mboot_ptr->mods_count > 0);
-    initrd_location = *((u32int*)mboot_ptr->mods_addr);
-    u32int initrd_end = *(u32int*)(mboot_ptr->mods_addr+4);
+    initrd_location = *((u32*)mboot_ptr->mods_addr);
+    u32 initrd_end = *(u32*)(mboot_ptr->mods_addr+4);
     // Don't trample our module with placement accesses, please!
     placement_address = initrd_end;
 
     console.printf("initrd: 0x%x - 0x%x\n", initrd_location, initrd_end-1);
 
     // Start paging.
-    vmem.init();
+    vmem.init(mem_total);
 
     // Start multitasking.
     scheduler.init();
 
-    u32int sp = 0xE0000000;
+    u32 sp = 0xE0000000;
 
     asm volatile(
       "mov %0, %%esp\n"
@@ -103,12 +125,20 @@ void kmain2() {
 
   pci_bus.init();
 
-  //console.write("Switching to user mode.\n");
-  // scheduler.switch_to_user_mode();
+  /* console.write("Switching to user mode.\n"); */
+  /* scheduler.switch_to_user_mode(); */
 
-  // syscall_monitor_write("Hello, user world!\n");
+  syscall_fork();
 
-  cpu::halt_loop();
+  int pid = syscall_getpid();
+  syscall_monitor_write("hello from a task\n");
+  /* syscall_monitor_write("hello from pid: "); */
+  /* syscall_monitor_write_dec(pid); */
+  /* syscall_monitor_write("\n"); */
+  syscall_pause();
+
+  /* syscall_exec("test"); */
+  /* syscall_monitor_write("done!\n"); */
 }
 
 }

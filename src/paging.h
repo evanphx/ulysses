@@ -50,7 +50,7 @@ struct VirtualMemory {
   u32* frames;
   u32  nframes;
 
-  void init();
+  void init(u32 total_memory);
   void alloc_frame(page *page, int is_kernel, int is_writeable);
   void free_frame(page *page);
 

@@ -4,6 +4,41 @@ read_eip:
     jmp eax                     ; Return. Can't use RET because return
                                 ; address popped off the stack. 
 
+[GLOBAL second_return]
+second_return:   ; A dummy symbol that should not be executed.
+    ret          ; It's address is just used to determine if save
+                 ; registers is returning for the 1st or 2nd time
+
+[GLOBAL save_registers]
+save_registers:
+    mov edx, [esp+4]
+    pop eax             ; where to return to
+    mov [edx+0],  eax   ; eip
+    mov [edx+4],  esp
+    mov [edx+8],  ebp
+    mov [edx+12], edi
+    mov [edx+16], esi
+    mov [edx+20], ebx
+    jmp eax
+
+[GLOBAL restore_registers]
+restore_registers:
+  cli
+  mov eax, [esp+8]
+  mov edx, [esp+4]
+
+  mov ecx, [edx+0]
+  mov esp, [edx+4]
+  mov ebp, [edx+8]
+  mov edi, [edx+12]
+  mov esi, [edx+16]
+  mov ebx, [edx+20]
+
+  mov cr3, eax
+  mov eax, dword second_return
+  sti
+  jmp ecx
+
 [GLOBAL copy_page_physical]
 copy_page_physical:
     push ebx              ; According to __cdecl, we must preserve the contents of EBX.
@@ -35,3 +70,4 @@ copy_page_physical:
     popf                  ; Pop EFLAGS back.
     pop ebx               ; Get the original value of EBX back.
     ret
+

@@ -5,7 +5,7 @@
 
 SOURCES=boot.o main.o console.o common.o descriptor_tables.o isr.o interrupt.o gdt.o timer.o \
         kheap.o paging.o ordered_array.o fs.o initrd.o task.o process.o syscall.o \
-				keyboard.o pci.o rtl8139.o eth.o arp.o rtc.o pit.o
+				keyboard.o pci.o rtl8139.o eth.o arp.o rtc.o pit.o elf.o
 
 OPT=-m32 -O0 -fno-inline
 CFLAGS=$(OPT) -fno-rtti -fno-exceptions -nostdlib -fno-builtin -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip

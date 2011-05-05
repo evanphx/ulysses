@@ -66,5 +66,11 @@ int syscall_##fn(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) \
 DECL_SYSCALL1(monitor_write, const char*)
 DECL_SYSCALL1(monitor_write_hex, int)
 DECL_SYSCALL1(monitor_write_dec, int)
+DECL_SYSCALL1(exec, const char*)
+
+DECL_SYSCALL0(fork);
+DECL_SYSCALL0(getpid);
+DECL_SYSCALL0(pause);
+DECL_SYSCALL0(exit);
 
 #endif

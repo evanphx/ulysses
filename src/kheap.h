@@ -9,8 +9,6 @@
 #include "common.h"
 #include "ordered_array.h"
 
-extern "C" {
-
 #define KHEAP_START         0xC0000000
 #define KHEAP_INITIAL_SIZE  0x100000
 
@@ -48,7 +46,18 @@ struct Heap {
   static Heap *create(u32 start, u32 end, u32 max, u8 supervisor, u8 readonly);
   void* alloc(u32 size, u8 page_align);
   void  free(void* p);
+
+  struct Allocation {
+    void* virt;
+    void* phys;
+  };
+
+  Allocation allocate(u32 size, int align=0);
 };
+
+extern Heap* kheap;
+
+extern "C" {
 
 /**
    Create a new heap.
@@ -106,11 +115,20 @@ void kfree(void *p);
 
 }
 
+inline void* operator new(unsigned int sz) {
+  kabort();
+}
+
+inline void* operator new(unsigned int sz, Heap*) {
+  return (void*)kmalloc(sz);
+}
+
+// Make placement new work!
+inline void* operator new(unsigned int, void* __p) { return __p; }
+
 template <typename T>
 T* knew() {
-  T* ptr = (T*)kmalloc(sizeof(T));
-  new(ptr) T();
-  return ptr;
+  return new(kheap) T();
 }
 
 template <typename T>

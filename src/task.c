@@ -8,12 +8,17 @@
 #include "kheap.h"
 #include "descriptor_tables.h"
 #include "cpu.h"
+#include "console.h"
 
 Scheduler scheduler = {0, 0, 0};
 
 // Some externs are needed to access members in paging.c...
-extern u32int initial_esp;
+extern u32 initial_esp;
 extern "C" u32 read_eip();
+
+extern "C" void* save_registers(volatile Task::SavedRegisters*);
+extern "C" void restore_registers(volatile Task::SavedRegisters*, u32);
+extern "C" void second_return();
 
 static void move_stack(void *new_stack_start, u32 size) {
   u32 i;
@@ -29,55 +34,23 @@ static void move_stack(void *new_stack_start, u32 size) {
         1 /* Is writable */ );
   }
 
-  // Flush the TLB by reading and writing the page directory address again.
-  u32int pd_addr;
-  asm volatile("mov %%cr3, %0" : "=r" (pd_addr));
-  asm volatile("mov %0, %%cr3" : : "r" (pd_addr));
+  cpu::flush_tbl();
 
   // Old ESP and EBP, read from registers.
-  u32int old_stack_pointer; asm volatile("mov %%esp, %0" : "=r" (old_stack_pointer));
-  u32int old_base_pointer;  asm volatile("mov %%ebp, %0" : "=r" (old_base_pointer));
+  u32 old_stack_pointer; asm volatile("mov %%esp, %0" : "=r" (old_stack_pointer));
+  u32 old_base_pointer;  asm volatile("mov %%ebp, %0" : "=r" (old_base_pointer));
 
   // Offset to add to old stack addresses to get a new stack address.
-  u32int offset            = (u32int)new_stack_start - initial_esp;
+  u32 offset            = (u32)new_stack_start - initial_esp;
 
   // New ESP and EBP.
-  u32int new_stack_pointer = old_stack_pointer + offset;
-  u32int new_base_pointer  = old_base_pointer  + offset;
+  u32 new_stack_pointer = old_stack_pointer + offset;
+  u32 new_base_pointer  = old_base_pointer  + offset;
 
   int copy_size = initial_esp - old_stack_pointer;
 
   // Copy the stack.
-  memcpy((u8int*)new_stack_pointer, (u8int*)old_stack_pointer, copy_size);
-
-  // Backtrace through the original stack, copying new values into
-  // the new stack.
-  /*
-     u32int limit = (u32int)new_stack_start - copy_size;
-     for(i = (u32int)new_stack_start; i > limit; i -= 4)
-     {
-     u32int tmp = *(u32int*)i;
-  // If the value of tmp is inside the range of the old stack, assume it is a base pointer
-  // and remap it. This will unfortunately remap ANY value in this range, whether they are
-  // base pointers or not.
-  if (( old_stack_pointer < tmp) && (tmp < initial_esp))
-  {
-  tmp = tmp + offset;
-  u32int *tmp2 = (u32int*)i;
-   *tmp2 = tmp;
-   }
-   }
-   */
-
-  // Change stacks.
-  /* asm volatile("mov %0, %%esp" : : "r" (new_stack_pointer)); */
-  /* asm volatile("mov %0, %%ebp" : : "r" (new_base_pointer)); */
-
-  /* u32int esp; */
-  /* asm volatile("mov %%esp, %0" : "=r" (esp)); */
-  /* console.write("checked stack to: "); */
-  /* console.write_hex(esp); */
-  /* console.write("\n"); */
+  memcpy((u8*)new_stack_pointer, (u8*)old_stack_pointer, copy_size);
 }
 
 void Scheduler::init() {
@@ -92,8 +65,9 @@ void Scheduler::init() {
     // Initialise the first task (kernel task)
     current_task = ready_queue = (Task*)kmalloc(sizeof(Task));
     current_task->id = next_pid++;
-    current_task->esp = current_task->ebp = 0;
-    current_task->eip = 0;
+    current_task->regs.esp = 0;
+    current_task->regs.ebp = 0;
+    current_task->regs.eip = 0;
     current_task->directory = vmem.current_directory;
     current_task->next = 0;
     current_task->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
@@ -106,29 +80,15 @@ void Scheduler::switch_task() {
   // If we haven't initialised tasking yet, just return.
   if(!current_task) return;
 
-  // Read esp, ebp now for saving later on.
-  u32 esp, ebp;
-  asm volatile("mov %%esp, %0" : "=r"(esp));
-  asm volatile("mov %%ebp, %0" : "=r"(ebp));
-
-  // Read the instruction pointer. We do some cunning logic here:
-  // One of two things could have happened when this function exits - 
-  //   (a) We called the function and it returned the EIP as requested.
-  //   (b) We have just switched tasks, and because the saved EIP is essentially
-  //       the instruction after read_eip(), it will seem as if read_eip has just
-  //       returned.
-  // In the second case we need to return immediately. To detect it we put a dummy
-  // value in EAX further down at the end of this function. As C returns values in EAX,
-  // it will look like the return value is this dummy value! (0x12345).
-  u32 eip = read_eip();
+  // Save the current registers into the current_task.
+  //
+  // This routine will return twice. Once after we initially call it
+  // and other time when the current task is being resumed. We detect
+  // that happening by checking if the returned value is &second_return;
+  void* val = save_registers((Task::SavedRegisters*)&current_task->regs);
 
   // Have we just switched tasks?
-  if(eip == 0x12345) return;
-
-  // No, we didn't switch tasks. Let's save some register values and switch.
-  current_task->eip = eip;
-  current_task->esp = esp;
-  current_task->ebp = ebp;
+  if(val == &second_return) return;
 
   // Get the next task to run.
   current_task = current_task->next;
@@ -136,35 +96,31 @@ void Scheduler::switch_task() {
   // If we fell off the end of the linked list start again at the beginning.
   if(!current_task) current_task = ready_queue;
 
-  eip = current_task->eip;
-  esp = current_task->esp;
-  ebp = current_task->ebp;
+  /* u32 eip = current_task->regs.eip; */
+  /* u32 esp = current_task->regs.esp; */
+  /* u32 ebp = current_task->regs.ebp; */
+
+  /* console.printf("new task| eip: %x, esp: %x, ebp: %x\n", eip, esp, ebp); */
 
   // Make sure the memory manager knows we've changed page directory.
   vmem.current_directory = current_task->directory;
 
   // Change our kernel stack over.
   set_kernel_stack(current_task->kernel_stack+KERNEL_STACK_SIZE);
-  // Here we:
-  // * Stop interrupts so we don't get interrupted.
-  // * Temporarily put the new EIP location in ECX.
-  // * Load the stack and base pointers from the new task struct.
-  // * Change page directory to the physical address (physicalAddr) of the new directory.
-  // * Put a dummy value (0x12345) in EAX so that above we can recognise that we've just
-  //   switched task.
-  // * Restart interrupts. The STI instruction has a delay - it doesn't take effect until after
-  //   the next instruction.
-  // * Jump to the location in ECX (remember we put the new EIP in there).
-  asm volatile("         \
-      cli;                 \
-      mov %0, %%ecx;       \
-      mov %1, %%esp;       \
-      mov %2, %%ebp;       \
-      mov %3, %%cr3;       \
-      mov $0x12345, %%eax; \
-      sti;                 \
-      jmp *%%ecx           "
-      : : "r"(eip), "r"(esp), "r"(ebp), "r"(vmem.current_directory->physicalAddr));
+
+  // Copy the registers in current_task->regs back to the machine
+  // and jump to the eip held in regs.eip.
+  //
+  // This will cause save_registers to return for a second time and
+  // the return value will be &second_return;
+  restore_registers(&current_task->regs, vmem.current_directory->physicalAddr);
+}
+
+void Scheduler::exit() {
+  console.printf("reg pd: %x\n", cpu::page_directory());
+  console.printf(" ct pd: %x\n", current_task->directory);
+  console.printf("cur pd: %x\n", vmem.current_directory);
+  console.printf("krn pd: %x\n", vmem.kernel_directory);
 }
 
 int Scheduler::fork() {
@@ -180,8 +136,8 @@ int Scheduler::fork() {
   // Create a new process.
   Task* new_task = (Task*)kmalloc(sizeof(Task));
   new_task->id = next_pid++;
-  new_task->esp = new_task->ebp = 0;
-  new_task->eip = 0;
+  new_task->regs.esp = new_task->regs.ebp = 0;
+  new_task->regs.eip = 0;
   new_task->directory = directory;
   current_task->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
   new_task->next = 0;
@@ -196,17 +152,7 @@ int Scheduler::fork() {
   // ...And extend it.
   tmp_task->next = new_task;
 
-  // This will be the entry point for the new process.
-  u32 eip = read_eip();
-
-  // We could be the parent or the child here - check.
-  if(current_task == parent_task) {
-    // We are the parent, so set up the esp/ebp/eip for our child.
-    u32int esp; asm volatile("mov %%esp, %0" : "=r"(esp));
-    u32int ebp; asm volatile("mov %%ebp, %0" : "=r"(ebp));
-    new_task->esp = esp;
-    new_task->ebp = ebp;
-    new_task->eip = eip;
+  if(save_registers(&new_task->regs) != &second_return) {
     // All finished: Reenable interrupts.
     cpu::enable_interrupts();
 

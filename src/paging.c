@@ -4,13 +4,13 @@
 #include "paging.h"
 #include "kheap.h"
 #include "monitor.h"
+#include "cpu.h"
 
 VirtualMemory vmem = {0, 0, 0, 0};
 
 extern "C" {
   // Defined in kheap.c
   extern u32 placement_address;
-  extern Heap* kheap;
 }
 
 // Function to allocate a frame.
@@ -19,6 +19,7 @@ void VirtualMemory::alloc_frame(page *page, int is_kernel, int is_writeable) {
   u32 idx = first_frame();
   if(idx == (u32)-1) {
     // PANIC! no free frames!!
+    kabort();
   }
 
   set_frame(idx*0x1000);
@@ -40,8 +41,7 @@ void VirtualMemory::free_frame(page *page) {
 static void page_fault(registers_t *regs) {
   // A page fault has occurred.
   // The faulting address is stored in the CR2 register.
-  u32 faulting_address;
-  asm volatile("mov %%cr2, %0" : "=r" (faulting_address));
+  u32 faulting_address = cpu::fault_address();
 
   // The error code gives us details of what happened.
   int present   = !(regs->err_code & 0x1); // Page not present
@@ -52,28 +52,34 @@ static void page_fault(registers_t *regs) {
 
   // Output an error message.
   console.write("Page fault! ( ");
-  if (present) {console.write("present ");}
-  if (rw) {console.write("read-only ");}
-  if (us) {console.write("user-mode ");}
-  if (reserved) {console.write("reserved ");}
+  if(present) console.write("present ");
+  if(rw) console.write("read-only ");
+  if(us) console.write("user-mode ");
+  if(reserved) console.write("reserved ");
   console.write(") at ");
   console.write_hex(faulting_address);
-  console.write(" - EIP: ");
-  console.write_hex(regs->eip);
-  console.write(" - ESP: ");
-  console.write_hex(regs->esp);
   console.write("\n");
+
+  console.printf("ds: %x\n", regs->ds);
+  console.printf("edi: %x, esi: %x, ebp: %x, esp: %x\n",
+                 regs->edi, regs->esi, regs->ebp, regs->esp);
+  console.printf("ebx: %x, edx: %x, ecx: %x, eax: %x\n",
+                 regs->ebx, regs->edx, regs->ecx, regs->eax);
+  console.printf("int: %d, err: %d\n", regs->int_no, regs->err_code);
+  console.printf("eip: %x, cs: %x, eflags: %x, useresp: %x, ss: %x\n",
+                 regs->eip, regs->cs, regs->eflags,
+                 regs->useresp, regs->ss);
+
   PANIC("Page fault");
 }
 
-
-void VirtualMemory::init() {
+void VirtualMemory::init(u32 total_memory) {
   kernel_directory = 0;
   current_directory = 0;
 
   // The size of physical memory. For the moment we 
   // assume it is 16MB big.
-  u32 mem_end_page = 0x1000000;
+  u32 mem_end_page = total_memory;
 
   nframes = mem_end_page / 0x1000;
   frames = (u32*)kmalloc(INDEX_FROM_BIT(nframes));
@@ -90,8 +96,9 @@ void VirtualMemory::init() {
   // to be created where necessary. We can't allocate frames yet because they
   // they need to be identity mapped first below, and yet we can't increase
   // placement_address between identity mapping and enabling the heap!
-  for(int i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += 0x1000)
+  for(int i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += 0x1000) {
     get_page(i, 1, kernel_directory);
+  }
 
   // We need to identity map (phys addr = virt addr) from
   // 0x0 to the end of used memory, so we can access this
@@ -103,8 +110,7 @@ void VirtualMemory::init() {
   // Allocate a lil' bit extra so the kernel heap can be
   // initialised properly.
 
-  //placement_address+0x1000)
-  for(int i = 0; i < 0x400000; i += 0x1000) {
+  for(int i = 0; i < placement_address + 0x1000; i += 0x1000) {
     // Kernel code is readable but not writeable from userspace.
     alloc_frame( get_page(i, 1, kernel_directory), 0, 0);
   }
@@ -129,11 +135,9 @@ void VirtualMemory::init() {
 
 void VirtualMemory::switch_page_directory(page_directory *dir) {
   current_directory = dir;
-  asm volatile("mov %0, %%cr3":: "r"(dir->physicalAddr));
-  u32 cr0;
-  asm volatile("mov %%cr0, %0": "=r"(cr0));
-  cr0 |= 0x80000000; // Enable paging!
-  asm volatile("mov %0, %%cr0":: "r"(cr0));
+
+  cpu::set_page_directory(dir->physicalAddr);
+  cpu::enable_paging();
 }
 
 page* VirtualMemory::get_page(u32 address, int make, page_directory *dir) {

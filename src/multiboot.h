@@ -18,32 +18,31 @@
 #define MULTIBOOT_FLAG_APM     0x200
 #define MULTIBOOT_FLAG_VBE     0x400
 
-struct multiboot
-{
-    u32int flags;
-    u32int mem_lower;
-    u32int mem_upper;
-    u32int boot_device;
-    u32int cmdline;
-    u32int mods_count;
-    u32int mods_addr;
-    u32int num;
-    u32int size;
-    u32int addr;
-    u32int shndx;
-    u32int mmap_length;
-    u32int mmap_addr;
-    u32int drives_length;
-    u32int drives_addr;
-    u32int config_table;
-    u32int boot_loader_name;
-    u32int apm_table;
-    u32int vbe_control_info;
-    u32int vbe_mode_info;
-    u32int vbe_mode;
-    u32int vbe_interface_seg;
-    u32int vbe_interface_off;
-    u32int vbe_interface_len;
+struct multiboot {
+    u32 flags;
+    u32 mem_lower;
+    u32 mem_upper;
+    u32 boot_device;
+    u32 cmdline;
+    u32 mods_count;
+    u32 mods_addr;
+    u32 num;
+    u32 size;
+    u32 addr;
+    u32 shndx;
+    u32 mmap_length;
+    u32 mmap_addr;
+    u32 drives_length;
+    u32 drives_addr;
+    u32 config_table;
+    u32 boot_loader_name;
+    u32 apm_table;
+    u32 vbe_control_info;
+    u32 vbe_mode_info;
+    u32 vbe_mode;
+    u32 vbe_interface_seg;
+    u32 vbe_interface_off;
+    u32 vbe_interface_len;
 }  __attribute__((packed));
 
 typedef struct multiboot_header multiboot_header_t;
