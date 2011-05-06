@@ -35,7 +35,7 @@ namespace initrd {
     Node* root;             // Our root directory node.
     Node* dev;              // We also add a directory node for /dev, so we can mount devfs later on.
     Node* root_nodes;              // List of file nodes.
-    int nroot_nodes;                    // Number of file nodes.
+    u32 nroot_nodes;                    // Number of file nodes.
   
     Node* init(u32 location);
   };

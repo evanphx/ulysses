@@ -111,6 +111,8 @@ int kmain(struct multiboot *mboot_ptr, u32 initial_stack)
       "mov %0, %%ebp\n"
       "jmp kmain2\n"
     : : "r" (sp));
+
+    return 0;
 }
 
 void kmain2() {

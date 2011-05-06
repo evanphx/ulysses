@@ -3,11 +3,13 @@ namespace cpu {
 
   static inline int enable_interrupts() {
     asm volatile("sti");
+    return 1;
   }
 
   static inline int disable_interrupts() {
     if(!interrupts_on) return 0;
     asm volatile("cli");
+    return 1;
   }
 
   static inline void restore_interrupts(int val) {

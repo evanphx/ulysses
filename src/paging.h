@@ -110,6 +110,8 @@ struct VirtualMemory {
         }
       }
     }
+
+    return (u32)-1;
   }
 };
 

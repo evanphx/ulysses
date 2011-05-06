@@ -8,7 +8,7 @@ SOURCES=boot.o main.o console.o common.o descriptor_tables.o isr.o interrupt.o g
 				keyboard.o pci.o rtl8139.o eth.o arp.o rtc.o pit.o elf.o
 
 OPT=-m32 -O0 -fno-inline
-CFLAGS=$(OPT) -fno-rtti -fno-exceptions -nostdlib -fno-builtin -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip
+CFLAGS=$(OPT) -Wall -Werror -fno-rtti -fno-exceptions -nostdlib -fno-builtin -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip
 LIBGCC=`i386-elf-gcc -print-libgcc-file-name`
 LDFLAGS=--oformat=elf32-i386 -melf_i386 -Tlink.ld
 ASFLAGS=-felf

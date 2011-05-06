@@ -91,22 +91,22 @@ char *strcpy(char *dest, const char *src)
       *dest++ = *src++;
     }
     while (*src != 0);
+
+    return dest;
 }
 
 // Concatenate the NULL-terminated string src onto
 // the end of dest, and return dest.
 char *strcat(char *dest, const char *src)
 {
-    while (*dest != 0)
-    {
-        *dest = *dest++;
+    while(*dest != 0) {
+      char c = *dest++;
+      *dest = c;
     }
 
-    do
-    {
+    do {
         *dest++ = *src++;
-    }
-    while (*src != 0);
+    } while (*src != 0);
     return dest;
 }
 

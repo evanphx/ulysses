@@ -48,7 +48,7 @@ static void page_fault(registers_t *regs) {
   int rw = regs->err_code & 0x2;           // Write operation?
   int us = regs->err_code & 0x4;           // Processor was in user-mode?
   int reserved = regs->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
-  int id = regs->err_code & 0x10;          // Caused by an instruction fetch?
+  // int id = regs->err_code & 0x10;          // Caused by an instruction fetch?
 
   // Output an error message.
   console.write("Page fault! ( ");
@@ -86,7 +86,6 @@ void VirtualMemory::init(u32 total_memory) {
   memset((u8int*)frames, 0, INDEX_FROM_BIT(nframes));
 
   // Let's make a page directory.
-  u32 phys;
   kernel_directory = (page_directory*)kmalloc_a(sizeof(page_directory));
   memset((u8int*)kernel_directory, 0, sizeof(page_directory));
   kernel_directory->physicalAddr = (u32)kernel_directory->tablesPhysical;
@@ -96,7 +95,7 @@ void VirtualMemory::init(u32 total_memory) {
   // to be created where necessary. We can't allocate frames yet because they
   // they need to be identity mapped first below, and yet we can't increase
   // placement_address between identity mapping and enabling the heap!
-  for(int i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += 0x1000) {
+  for(u32 i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += 0x1000) {
     get_page(i, 1, kernel_directory);
   }
 
@@ -110,13 +109,13 @@ void VirtualMemory::init(u32 total_memory) {
   // Allocate a lil' bit extra so the kernel heap can be
   // initialised properly.
 
-  for(int i = 0; i < placement_address + 0x1000; i += 0x1000) {
+  for(u32 i = 0; i < placement_address + 0x1000; i += 0x1000) {
     // Kernel code is readable but not writeable from userspace.
     alloc_frame( get_page(i, 1, kernel_directory), 0, 0);
   }
 
   // Now allocate those pages we mapped earlier.
-  for(int i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += 0x1000) {
+  for(u32 i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += 0x1000) {
     alloc_frame( get_page(i, 1, kernel_directory), 0, 0);
   }
 

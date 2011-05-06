@@ -42,7 +42,7 @@ namespace initrd {
       return fs->dev;
     }
 
-    for(int i = 0; i < fs->nroot_nodes; i++) {
+    for(u32 i = 0; i < fs->nroot_nodes; i++) {
       if(!strcmp(name, fs->root_nodes[i].name)) {
         return &fs->root_nodes[i];
       }
@@ -81,7 +81,7 @@ namespace initrd {
     root_nodes = knew_array<initrd::Node>(nroot_nodes);
 
     // For every file...
-    for(int i = 0; i < initrd_header->nfiles; i++) {
+    for(u32 i = 0; i < initrd_header->nfiles; i++) {
       // Edit the file's header - currently it holds the file offset
       // relative to the start of the ramdisk. We want it relative to the start
       // of memory.

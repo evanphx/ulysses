@@ -117,6 +117,7 @@ void kfree(void *p);
 
 inline void* operator new(unsigned int sz) {
   kabort();
+  return (void*)-1;
 }
 
 inline void* operator new(unsigned int sz, Heap*) {

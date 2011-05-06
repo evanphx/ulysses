@@ -72,7 +72,7 @@ void sys_sleep(int seconds) {
   scheduler.sleep(seconds);
 }
 
-const static int raw_syscall_base = 1024;
+const static u32 raw_syscall_base = 1024;
 
 DEFN_SYSCALL1(monitor_write, 0, const char*);
 DEFN_SYSCALL1(monitor_write_hex, 1, int);

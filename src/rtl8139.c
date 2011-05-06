@@ -222,7 +222,6 @@ void RTL8139::pm_wakeup() {
 }
 
 void RTL8139::reset() {
-  int i = 0;
   ctrl.outb(CmdReset, ChipCmd);
 
   console.write("rtl8139: Resetting...");
@@ -288,8 +287,6 @@ u32 RTL8139::last_tx_status() {
 }
 
 void RTL8139::receive(u16int status) {
-  int i;
-
   while((ctrl.inb(ChipCmd) & RxBufEmpty) == 0) {
     int offset = cur_rx % default_rx_buf_len;
 
@@ -351,11 +348,11 @@ void RTL8139::receive(u16int status) {
 static void rtl8139_interrupt(registers_t* regs) {
   u16int status = rtl8139.ack();
 
-  if(status & AllInterrupts == 0) return;
+  if((status & AllInterrupts) == 0) return;
   if(status & RxInterrupts) rtl8139.receive(status);
   if(status & TxInterrupts) {
     int tx_status = rtl8139.last_tx_status();
-    if(status == TxOK) {
+    if(tx_status == TxOK) {
       kputs("Got a TxOK interrupt.\n");
     } else {
       kputs("Got a TxErr interrupt.\n");
@@ -385,14 +382,17 @@ void xmit_packet(u8int* buf, int size) {
 err_t rtl8139_open(struct netif* netif);
 err_t rtl8139_input(struct pbuf* p, struct netif* netif) {
   kputs("Would send packet out rtl8139 for lwip.\n");
+  return 0;
 }
 
 err_t rtl8139_link_output(struct netif* netif, struct pbuf* p) {
   xmit_packet((u8int*)p->payload, p->len);
+  return 0;
 }
 
 err_t rtl8139_output(struct netif* nif, struct pbuf* p, struct ip_addr* dest) {
   etharp_output(nif, p, dest); 
+  return 0;
 }
 
 void init_rtl8139(u32int io, u8int irq) {
@@ -479,4 +479,5 @@ err_t rtl8139_open(struct netif* netif) {
   rtl8139_lwip_netif.hwaddr_len = 6;
 
   rtl8139.enable_interrupts();
+  return 0;
 }

@@ -97,7 +97,7 @@ static void expand(u32 new_size, Heap *heap) {
   ASSERT(new_size > heap->end_address - heap->start_address);
 
   // Get the nearest following page boundary.
-  if(new_size&0xFFFFF000 != 0) {
+  if((new_size & 0xFFFFF000) != 0) {
     new_size &= 0xFFFFF000;
     new_size += 0x1000;
   }
@@ -152,7 +152,7 @@ static s32 find_smallest_hole(u32 size, u8 page_align, Heap *heap) {
       // Page-align the starting point of this header.
       u32 location = (u32)header;
       s32 offset = 0;
-      if((location+sizeof(Heap::header)) & 0xFFFFF000 != 0)
+      if(((location+sizeof(Heap::header)) & 0xFFFFF000) != 0)
         offset = 0x1000 /* page size */  - (location+sizeof(Heap::header))%0x1000;
       s32 hole_size = (s32)header->size - offset;
       // Can we fit now?
@@ -184,7 +184,7 @@ Heap* Heap::create(u32 start, u32 end_addr, u32 max, u8 supervisor, u8 readonly)
   start += sizeof(void*)*HEAP_INDEX_SIZE;
 
   // Make sure the start address is page-aligned.
-  if(start & 0xFFFFF000 != 0) {
+  if((start & 0xFFFFF000) != 0) {
     start &= 0xFFFFF000;
     start += 0x1000;
   }
@@ -227,7 +227,7 @@ void* Heap::alloc(u32 size, u8 page_align) {
     u32 idx = -1;
     u32 value = 0x0;
 
-    while(iterator < index.size) {
+    while((u32)iterator < index.size) {
       u32 tmp = (u32)index.lookup(iterator);
       if(tmp > value) {
         value = tmp;
@@ -237,7 +237,7 @@ void* Heap::alloc(u32 size, u8 page_align) {
     }
 
     // If we didn't find ANY headers, we need to add one.
-    if(idx == -1) {
+    if((s32)idx == -1) {
       Heap::header *header = (Heap::header *)old_end_address;
       header->magic = HEAP_MAGIC;
       header->size = new_length - old_length;

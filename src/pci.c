@@ -72,7 +72,7 @@ void PCIBus::scan() {
   console.write("Scanning PCI bus:\n");
 
   for(int device = 0; device < 0xff; device++) {
-    u32 header = configb(device, PCI_HEADER_VAR);
+    // u32 header = configb(device, PCI_HEADER_VAR);
 
     u32 vendor = configl(device, PCI_VENDOR_ID);
 
@@ -89,8 +89,7 @@ void PCIBus::scan() {
 
     int found_vendor = 0;
 
-    int i;
-    for(i = 0; i < PCI_VENTABLE_LEN; i++) {
+    for(u32 i = 0; i < PCI_VENTABLE_LEN; i++) {
       if(PciVenTable[i].VenId == vendor_id) {
         console.write(PciVenTable[i].VenShort);
         found_vendor = 1;
@@ -105,7 +104,7 @@ void PCIBus::scan() {
 
     int found_device = 1;
 
-    for(i = 0; i < PCI_DEVTABLE_LEN; i++) {
+    for(u32 i = 0; i < PCI_DEVTABLE_LEN; i++) {
       if(PciDevTable[i].VenId == vendor_id &&
           PciDevTable[i].DevId == device_id) {
         console.write(PciDevTable[i].Chip);

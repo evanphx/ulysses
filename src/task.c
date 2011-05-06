@@ -32,7 +32,6 @@ extern "C" void restore_registers(volatile Task::SavedRegisters*, u32);
 extern "C" void second_return();
 
 static void move_stack(void *new_stack_start, u32 size) {
-  u32 i;
   // Allocate some space for the new stack.
   for(u32 i = (u32)new_stack_start;
       i >= ((u32)new_stack_start-size);
@@ -54,9 +53,8 @@ static void move_stack(void *new_stack_start, u32 size) {
   // Offset to add to old stack addresses to get a new stack address.
   u32 offset            = (u32)new_stack_start - initial_esp;
 
-  // New ESP and EBP.
+  // New ESP
   u32 new_stack_pointer = old_stack_pointer + offset;
-  u32 new_base_pointer  = old_base_pointer  + offset;
 
   int copy_size = initial_esp - old_stack_pointer;
 
@@ -78,15 +76,8 @@ void Scheduler::init() {
   move_stack((void*)0xE0000000, 0x2000);
 
   // Initialise the first task (kernel task)
-  current = (Task*)kmalloc(sizeof(Task));
-  current->id = next_pid++;
-  current->regs.esp = 0;
-  current->regs.ebp = 0;
-  current->regs.eip = 0;
+  current = new(kheap) Task(next_pid++);
   current->directory = vmem.current_directory;
-  current->list = 0;
-  current->next = 0;
-  current->prev = 0;
   current->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
 
   make_ready(current);
@@ -153,12 +144,6 @@ void Scheduler::switch_task() {
 
   current = next;
 
-  /* u32 eip = current->regs.eip; */
-  /* u32 esp = current->regs.esp; */
-  /* u32 ebp = current->regs.ebp; */
-
-  /* console.printf("new task| eip: %x, esp: %x, ebp: %x\n", eip, esp, ebp); */
-
   // Make sure the memory manager knows we've changed page directory.
   vmem.current_directory = current->directory;
 
@@ -202,27 +187,24 @@ void Scheduler::sleep(int secs) {
   switch_task();
 }
 
+Task::Task(int pid)
+  : id(pid)
+  , list(0)
+  , prev(0)
+  , next(0)
+{}
+
 int Scheduler::fork() {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
-
-  // Take a pointer to this process' task struct for later reference.
-  Task* parent_task = (Task*)current;
 
   // Clone the address space.
   page_directory* directory = vmem.clone_current();
 
   // Create a new process.
-  Task* new_task = (Task*)kmalloc(sizeof(Task));
-  new_task->id = next_pid++;
-  new_task->regs.esp = new_task->regs.ebp = 0;
-  new_task->regs.eip = 0;
+  Task* new_task = new(kheap) Task(next_pid++);
   new_task->directory = directory;
   new_task->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
-
-  new_task->list = 0;
-  new_task->next = 0;
-  new_task->prev = 0;
 
   ready_queue.append(new_task);
 

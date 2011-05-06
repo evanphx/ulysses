@@ -17,6 +17,11 @@ struct Task {
   struct SavedRegisters {
     u32 eip, esp, ebp;
     u32 edi, esi, ebx;
+
+    SavedRegisters()
+      : eip(0), esp(0), ebp(0)
+      , edi(0), esi(0), ebx(0)
+    {}
   };
 
   enum State {
@@ -24,6 +29,8 @@ struct Task {
     eWaiting,
     eDead
   };
+
+  Task(int pid);
 
   int id;              // Process ID.
   SavedRegisters regs;
