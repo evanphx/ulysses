@@ -72,5 +72,6 @@ DECL_SYSCALL0(fork);
 DECL_SYSCALL0(getpid);
 DECL_SYSCALL0(pause);
 DECL_SYSCALL0(exit);
+DECL_SYSCALL1(sleep, int);
 
 #endif

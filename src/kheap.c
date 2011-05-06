@@ -5,6 +5,7 @@
 
 #include "kheap.h"
 #include "paging.h"
+#include "console.h"
 
 Heap* kheap = 0;
 
@@ -328,7 +329,10 @@ void Heap::free(void *p) {
 
   // Sanity checks.
   ASSERT(header->magic == HEAP_MAGIC);
-  ASSERT(footer->magic == HEAP_MAGIC);
+  if(footer->magic != HEAP_MAGIC) {
+    console.printf("bad footer detected: %x\n", footer->magic);
+    ASSERT(footer->magic == HEAP_MAGIC);
+  }
 
   // Make us a hole.
   header->is_hole = 1;

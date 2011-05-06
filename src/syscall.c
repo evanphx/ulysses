@@ -8,6 +8,7 @@
 #include "elf.h"
 
 #include "task.h"
+#include "cpu.h"
 
 static void syscall_handler(registers_t *regs);
 
@@ -60,12 +61,15 @@ int sys_getpid() {
 }
 
 void sys_pause() {
-  console.printf("pausing, switching tasks.\n");
   scheduler.switch_task();
 }
 
 void sys_exit() {
   scheduler.exit();
+}
+
+void sys_sleep(int seconds) {
+  scheduler.sleep(seconds);
 }
 
 const static int raw_syscall_base = 1024;
@@ -77,6 +81,7 @@ DEFN_SYSCALL0(fork, 3);
 DEFN_SYSCALL0(getpid, 4);
 DEFN_SYSCALL0(pause, 5);
 DEFN_SYSCALL0(exit, 6);
+DEFN_SYSCALL1(sleep, 7, int);
 
 DEFN_SYSCALL1(exec, raw_syscall_base + 0, const char*);
 
@@ -87,14 +92,15 @@ static void* syscalls[] = {
     (void*)&sys_fork,
     (void*)&sys_getpid,
     (void*)&sys_pause,
-    (void*)&sys_exit
+    (void*)&sys_exit,
+    (void*)&sys_sleep
 };
 
 static void* raw_syscalls[] = {
     (void*)&sys_exec
 };
 
-const static u32 num_syscalls = 7;
+const static u32 num_syscalls = 8;
 const static u32 num_raw_syscalls = 1;
 
 void initialise_syscalls() {

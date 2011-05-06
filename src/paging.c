@@ -172,8 +172,9 @@ extern "C" void copy_page_physical(int, int);
 page_table* VirtualMemory::clone_table(page_table *src, u32 *physAddr) {
   // Make a new page table, which is page aligned.
   page_table *table = (page_table*)kmalloc_ap(sizeof(page_table), physAddr);
+
   // Ensure that the new table is blank.
-  memset((u8int*)table, 0, sizeof(page_directory));
+  memset((u8int*)table, 0, sizeof(page_table));
 
   // For every entry in the table...
   for(int i = 0; i < 1024; i++) {
@@ -183,15 +184,26 @@ page_table* VirtualMemory::clone_table(page_table *src, u32 *physAddr) {
     // Get a new frame.
     alloc_frame(&table->pages[i], 0, 0);
     // Clone the flags from source to destination.
-    if (src->pages[i].present) table->pages[i].present = 1;
-    if (src->pages[i].rw)      table->pages[i].rw = 1;
-    if (src->pages[i].user)    table->pages[i].user = 1;
-    if (src->pages[i].accessed)table->pages[i].accessed = 1;
-    if (src->pages[i].dirty)   table->pages[i].dirty = 1;
+    if(src->pages[i].present)  table->pages[i].present = 1;
+    if(src->pages[i].rw)       table->pages[i].rw = 1;
+    if(src->pages[i].user)     table->pages[i].user = 1;
+    if(src->pages[i].accessed) table->pages[i].accessed = 1;
+    if(src->pages[i].dirty)    table->pages[i].dirty = 1;
+
     // Physically copy the data across. This function is in process.s.
     copy_page_physical(src->pages[i].frame*0x1000, table->pages[i].frame*0x1000);
   }
+
   return table;
+}
+
+void VirtualMemory::free_table(page_table* src) {
+  for(int i = 0; i < 1024; i++) {
+    if(!src->pages[i].frame) continue;
+    free_frame(&src->pages[i]);
+  }
+
+  kfree(src);
 }
 
 page_directory* VirtualMemory::clone_directory(page_directory *src) {
@@ -223,6 +235,18 @@ page_directory* VirtualMemory::clone_directory(page_directory *src) {
     }
   }
   return dir;
+}
+
+void VirtualMemory::free_directory(page_directory* dir) {
+  for(int i = 0; i < 1024; i++) {
+    if(!dir->tables[i]) continue;
+
+    if(kernel_directory->tables[i] != dir->tables[i]) {
+      free_table(dir->tables[i]);
+    }
+  }
+
+  kfree(dir);
 }
 
 page_directory* VirtualMemory::clone_current() {

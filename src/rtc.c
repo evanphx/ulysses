@@ -73,6 +73,7 @@ void init_clock() {
   cur_sec = epoch;
   cur_usec = 0;
 
+  /*
   // Do it 10 times to let it warm up so we get a decent one
   int i = 0;
   while(i++ < 10) {
@@ -82,6 +83,7 @@ void init_clock() {
   console.printf("rdtsc cycle/sec: %llu\n", cycle_per_sec);
 
   last_rdtsc = rdtsc();
+  */
   
   /* u64 tsc20 = pit_timeRDTSC(); */
   /* console.printf("tsc20: %lld\n", tsc20); */

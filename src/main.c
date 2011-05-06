@@ -85,7 +85,7 @@ int kmain(struct multiboot *mboot_ptr, u32 initial_stack)
     cpu::interrupts_on = 1;
     cpu::enable_interrupts();
 
-    init_timer(SLICE_HZ);
+    timer.init(SLICE_HZ);
 
     show_cpuid();
 
@@ -125,19 +125,28 @@ void kmain2() {
 
   pci_bus.init();
 
-  /* console.write("Switching to user mode.\n"); */
-  /* scheduler.switch_to_user_mode(); */
+  if(syscall_fork() == 0) {
+    /* console.write("Switching to user mode.\n"); */
+    scheduler.switch_to_user_mode();
 
-  syscall_fork();
+    syscall_exec("test");
+  } else {
+    // The idle task code. Reschedule forever and let
+    // the cpu sleep between interrupts.
+    for(;;) {
+      scheduler.cleanup();
+      scheduler.switch_task();
+      cpu::halt();
+    }
+  }
 
-  int pid = syscall_getpid();
-  syscall_monitor_write("hello from a task\n");
+  /* int pid = syscall_getpid(); */
+  /* syscall_monitor_write("hello from a task\n"); */
   /* syscall_monitor_write("hello from pid: "); */
   /* syscall_monitor_write_dec(pid); */
   /* syscall_monitor_write("\n"); */
-  syscall_pause();
+  // syscall_pause();
 
-  /* syscall_exec("test"); */
   /* syscall_monitor_write("done!\n"); */
 }
 

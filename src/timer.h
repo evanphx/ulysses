@@ -6,9 +6,20 @@
 
 #include "common.h"
 
-void init_timer(u32int frequency);
-
 #define NSEC_PER_SEC 1000000000
 #define SLICE_HZ 100
 #define SLICE_US 10000
+
+struct Timer {
+  u32 ticks;
+
+  u32 secs_to_ticks(int secs) {
+    return secs * SLICE_HZ;
+  }
+
+  void init(u32 frequency);
+};
+
+extern Timer timer;
+
 #endif

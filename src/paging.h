@@ -61,6 +61,9 @@ struct VirtualMemory {
   page_directory* clone_directory(page_directory *src);
   page_directory* clone_current();
 
+  void free_table(page_table* tbl);
+  void free_directory(page_directory* dir);
+
   private:
 
   page_table* clone_table(page_table* src, u32* phys);
