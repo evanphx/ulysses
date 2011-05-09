@@ -1,4 +1,7 @@
 namespace cpu {
+
+  static const int cPageSize = 0x1000;
+
   static int interrupts_on = 0;
 
   static inline int enable_interrupts() {

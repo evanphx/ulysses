@@ -31,37 +31,6 @@ extern "C" void* save_registers(volatile Task::SavedRegisters*);
 extern "C" void restore_registers(volatile Task::SavedRegisters*, u32);
 extern "C" void second_return();
 
-static void move_stack(void *new_stack_start, u32 size) {
-  // Allocate some space for the new stack.
-  for(u32 i = (u32)new_stack_start;
-      i >= ((u32)new_stack_start-size);
-      i -= 0x1000)
-  {
-    // General-purpose stack is in user-mode.
-    vmem.alloc_frame(
-        vmem.get_current_page(i, 1),
-        0 /* User mode */,
-        1 /* Is writable */ );
-  }
-
-  cpu::flush_tbl();
-
-  // Old ESP and EBP, read from registers.
-  u32 old_stack_pointer; asm volatile("mov %%esp, %0" : "=r" (old_stack_pointer));
-  u32 old_base_pointer;  asm volatile("mov %%ebp, %0" : "=r" (old_base_pointer));
-
-  // Offset to add to old stack addresses to get a new stack address.
-  u32 offset            = (u32)new_stack_start - initial_esp;
-
-  // New ESP
-  u32 new_stack_pointer = old_stack_pointer + offset;
-
-  int copy_size = initial_esp - old_stack_pointer;
-
-  // Copy the stack.
-  memcpy((u8*)new_stack_pointer, (u8*)old_stack_pointer, copy_size);
-}
-
 void Scheduler::init() {
   // Rather important stuff happening, no interrupts please!
   cpu::disable_interrupts();
@@ -71,9 +40,6 @@ void Scheduler::init() {
   ready_queue.init();
   cleanup_queue.init();
   waiting_queue.init();
-
-  // Relocate the stack so we know where it is.
-  move_stack((void*)0xE0000000, 0x2000);
 
   // Initialise the first task (kernel task)
   current = new(kheap) Task(next_pid++);

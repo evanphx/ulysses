@@ -6,6 +6,7 @@
 #include "kheap.hpp"
 #include "paging.hpp"
 #include "console.hpp"
+#include "cpu.hpp"
 
 Heap* kheap = 0;
 
@@ -25,8 +26,6 @@ Allocation Heap::allocate(u32 size, int align=0) {
   return alloc;
 }
 */
-
-static const int cPageSize = 0x1000;
 
 extern "C" {
 
@@ -155,7 +154,7 @@ static s32 find_smallest_hole(u32 size, u8 page_align, Heap *heap) {
       u32 location = (u32)header;
       s32 offset = 0;
       if(((location+sizeof(Heap::header)) & 0xFFFFF000) != 0) {
-        offset = cPageSize - (location+sizeof(Heap::header))%0x1000;
+        offset = cpu::cPageSize - (location+sizeof(Heap::header))%0x1000;
       }
       s32 hole_size = (s32)header->size - offset;
       // Can we fit now?
@@ -280,9 +279,9 @@ void* Heap::alloc(u32 size, u8 page_align) {
 
   // If we need to page-align the data, do it now and make a new hole in front of our block.
   if(page_align && (orig_hole_pos & 0xFFFFF000)) {
-    u32 new_location   = orig_hole_pos + cPageSize - (orig_hole_pos&0xFFF) - sizeof(Heap::header);
+    u32 new_location   = orig_hole_pos + cpu::cPageSize - (orig_hole_pos&0xFFF) - sizeof(Heap::header);
     Heap::header *hole_header = (Heap::header *)orig_hole_pos;
-    hole_header->size     = cPageSize - (orig_hole_pos&0xFFF) - sizeof(Heap::header);
+    hole_header->size     = cpu::cPageSize - (orig_hole_pos&0xFFF) - sizeof(Heap::header);
     hole_header->magic    = HEAP_MAGIC;
     hole_header->is_hole  = 1;
     Heap::footer *hole_footer = (Heap::footer *) ( (u32)new_location - sizeof(Heap::footer) );

@@ -98,7 +98,17 @@ int kmain(struct multiboot *mboot_ptr, u32 initial_stack) {
   // Start multitasking.
   scheduler.init();
 
+  // Setup a new stack and jump to it.
+
+  // Allocate some space for the new stack.
   u32 sp = 0xE0000000;
+  u32 size = cpu::cPageSize * 2;
+
+  for(u32 i = sp; i >= sp-size; i -= cpu::cPageSize) {
+    vmem.alloc_frame(vmem.get_current_page(i, 1), 0, 1);
+  }
+
+  cpu::flush_tbl();
 
   asm volatile(
     "mov %0, %%esp\n"
