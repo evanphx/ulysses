@@ -20,7 +20,6 @@
 extern "C" {
 
 extern u32 placement_address;
-u32 initial_esp;
 u32 initrd_location;
 
 void kmain2();
@@ -52,7 +51,6 @@ static void show_cpuid() {
 /* } */
 
 int kmain(struct multiboot *mboot_ptr, u32 initial_stack) {
-  initial_esp = initial_stack;
   // Initialise all the ISRs and segmentation
   init_descriptor_tables();
   // Initialise the screen (by clearing it)

@@ -63,7 +63,7 @@ u32 kmalloc_int(u32 sz, int align, u32 *phys) {
 }
 
 void kfree(void *p) {
-  // kheap->free(p);
+  kheap->free(p);
 }
 
 u32 kmalloc_a(u32 sz) {
@@ -336,7 +336,10 @@ void Heap::free(void *p) {
   Heap::footer *footer = (Heap::footer*) ( (u32)header + header->size - sizeof(Heap::footer) );
 
   // Sanity checks.
-  ASSERT(header->magic == HEAP_MAGIC);
+  if(header->magic != HEAP_MAGIC) {
+    ASSERT(header->magic == HEAP_MAGIC);
+  }
+
   if(footer->magic != HEAP_MAGIC) {
     console.printf("bad footer detected: %x\n", footer->magic);
     ASSERT(footer->magic == HEAP_MAGIC);

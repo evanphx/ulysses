@@ -49,7 +49,8 @@ namespace elf {
     }
 
     if(hdr->e_phnum > 0) {
-      ProgramHeader* ph = hdr->load_ph(node);
+      ProgramHeader* first_ph = hdr->load_ph(node);
+      ProgramHeader* ph = first_ph;
 
       for(int i = 0; i < hdr->e_phnum; i++) {
         if(ph->load_p()) {
@@ -62,7 +63,7 @@ namespace elf {
         ph++;
       }
 
-      kfree(ph);
+      kfree(first_ph);
 
     }
 

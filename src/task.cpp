@@ -13,6 +13,12 @@
 
 Scheduler scheduler;
 
+Task::Task(int pid)
+  : id(pid)
+  , alarm_at(0)
+  , exit_code(0)
+{}
+
 void Task::sleep_til(int secs) {
   alarm_at = timer.ticks + timer.secs_to_ticks(secs);
 }
@@ -22,10 +28,6 @@ bool Task::alarm_expired() {
          alarm_at != 0 &&
          alarm_at <= timer.ticks;
 }
-
-// Some externs are needed to access members in paging.c...
-extern u32 initial_esp;
-extern "C" u32 read_eip();
 
 extern "C" void* save_registers(volatile Task::SavedRegisters*);
 extern "C" void restore_registers(volatile Task::SavedRegisters*, u32);
@@ -111,7 +113,7 @@ void Scheduler::switch_task() {
   vmem.current_directory = current->directory;
 
   // Change our kernel stack over.
-  set_kernel_stack(current->kernel_stack+KERNEL_STACK_SIZE);
+  set_kernel_stack(current->kernel_stack + KERNEL_STACK_SIZE);
 
   // Copy the registers in current->regs back to the machine
   // and jump to the eip held in regs.eip.
@@ -159,12 +161,6 @@ void Scheduler::sleep(int secs) {
   switch_task();
 }
 
-Task::Task(int pid)
-  : id(pid)
-  , alarm_at(0)
-  , exit_code(0)
-{}
-
 int Scheduler::fork() {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
@@ -197,7 +193,7 @@ int Scheduler::getpid() {
 
 void Scheduler::switch_to_user_mode() {
   // Set up our kernel stack.
-  set_kernel_stack(current->kernel_stack+KERNEL_STACK_SIZE);
+  set_kernel_stack(current->kernel_stack + KERNEL_STACK_SIZE);
 
   // Set up a stack structure for switching to user mode.
   asm volatile("  \
