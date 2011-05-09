@@ -26,6 +26,8 @@ Allocation Heap::allocate(u32 size, int align=0) {
 }
 */
 
+static const int cPageSize = 0x1000;
+
 extern "C" {
 
 // end is defined in the linker script.
@@ -62,7 +64,7 @@ u32 kmalloc_int(u32 sz, int align, u32 *phys) {
 }
 
 void kfree(void *p) {
-  kheap->free(p);
+  // kheap->free(p);
 }
 
 u32 kmalloc_a(u32 sz) {
@@ -152,8 +154,9 @@ static s32 find_smallest_hole(u32 size, u8 page_align, Heap *heap) {
       // Page-align the starting point of this header.
       u32 location = (u32)header;
       s32 offset = 0;
-      if(((location+sizeof(Heap::header)) & 0xFFFFF000) != 0)
-        offset = 0x1000 /* page size */  - (location+sizeof(Heap::header))%0x1000;
+      if(((location+sizeof(Heap::header)) & 0xFFFFF000) != 0) {
+        offset = cPageSize - (location+sizeof(Heap::header))%0x1000;
+      }
       s32 hole_size = (s32)header->size - offset;
       // Can we fit now?
       if(hole_size >= (s32)size) break;
@@ -209,6 +212,7 @@ Heap* Heap::create(u32 start, u32 end_addr, u32 max, u8 supervisor, u8 readonly)
 void* Heap::alloc(u32 size, u8 page_align) {
   // Make sure we take the size of header/footer into account.
   u32 new_size = size + sizeof(Heap::header) + sizeof(Heap::footer);
+
   // Find the smallest hole that will fit.
   s32 iterator = find_smallest_hole(new_size, page_align, this);
 
@@ -240,6 +244,7 @@ void* Heap::alloc(u32 size, u8 page_align) {
     if((s32)idx == -1) {
       Heap::header *header = (Heap::header *)old_end_address;
       header->magic = HEAP_MAGIC;
+      ASSERT(old_length > new_length);
       header->size = new_length - old_length;
       header->is_hole = 1;
       Heap::footer *footer = (Heap::footer *) (old_end_address + header->size - sizeof(Heap::footer));
@@ -249,6 +254,7 @@ void* Heap::alloc(u32 size, u8 page_align) {
     } else {
       // The last header needs adjusting.
       Heap::header *header = index.lookup(idx);
+      ASSERT(new_length > old_length);
       header->size += new_length - old_length;
       // Rewrite the footer.
       Heap::footer *footer = (Heap::footer *) ( (u32)header + header->size - sizeof(Heap::footer) );
@@ -265,6 +271,7 @@ void* Heap::alloc(u32 size, u8 page_align) {
 
   // Here we work out if we should split the hole we found into two parts.
   // Is the original hole size - requested hole size less than the overhead for adding a new hole?
+  ASSERT(orig_hole_size > new_size);
   if(orig_hole_size - new_size < sizeof(Heap::header) + sizeof(Heap::footer)) {
     // Then just increase the requested size to the size of the hole we found.
     size += orig_hole_size-new_size;
@@ -272,16 +279,18 @@ void* Heap::alloc(u32 size, u8 page_align) {
   }
 
   // If we need to page-align the data, do it now and make a new hole in front of our block.
-  if(page_align && orig_hole_pos&0xFFFFF000) {
-    u32 new_location   = orig_hole_pos + 0x1000 /* page size */ - (orig_hole_pos&0xFFF) - sizeof(Heap::header);
+  if(page_align && (orig_hole_pos & 0xFFFFF000)) {
+    u32 new_location   = orig_hole_pos + cPageSize - (orig_hole_pos&0xFFF) - sizeof(Heap::header);
     Heap::header *hole_header = (Heap::header *)orig_hole_pos;
-    hole_header->size     = 0x1000 /* page size */ - (orig_hole_pos&0xFFF) - sizeof(Heap::header);
+    hole_header->size     = cPageSize - (orig_hole_pos&0xFFF) - sizeof(Heap::header);
     hole_header->magic    = HEAP_MAGIC;
     hole_header->is_hole  = 1;
     Heap::footer *hole_footer = (Heap::footer *) ( (u32)new_location - sizeof(Heap::footer) );
     hole_footer->magic    = HEAP_MAGIC;
     hole_footer->hdr   = hole_header;
     orig_hole_pos         = new_location;
+
+    ASSERT(orig_hole_size > hole_header->size);
     orig_hole_size        = orig_hole_size - hole_header->size;
 
   } else {
@@ -301,7 +310,7 @@ void* Heap::alloc(u32 size, u8 page_align) {
 
   // We may need to write a new hole after the allocated block.
   // We do this only if the new hole would have positive size...
-  if(orig_hole_size - new_size > 0) {
+  if(orig_hole_size > new_size) {
     Heap::header *hole_header = (Heap::header *) (orig_hole_pos + sizeof(Heap::header) + size + sizeof(Heap::footer));
     hole_header->magic    = HEAP_MAGIC;
     hole_header->is_hole  = 1;

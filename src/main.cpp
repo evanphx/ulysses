@@ -51,75 +51,67 @@ static void show_cpuid() {
   /* asm volatile("rdtsc\n" : "=a"(*lower), "=d"(*upper)); */
 /* } */
 
-int kmain(struct multiboot *mboot_ptr, u32 initial_stack)
-{
-    u32 cur_esp;
-    asm volatile("mov %%esp, %0" : "=r" (cur_esp));
+int kmain(struct multiboot *mboot_ptr, u32 initial_stack) {
+  initial_esp = initial_stack;
+  // Initialise all the ISRs and segmentation
+  init_descriptor_tables();
+  // Initialise the screen (by clearing it)
+  // console.clear();
+  console.setup();
 
-    initial_esp = initial_stack;
-    // Initialise all the ISRs and segmentation
-    init_descriptor_tables();
-    // Initialise the screen (by clearing it)
-    // console.clear();
-    console.setup();
+  u32 mem_total;
+  if(mboot_ptr->flags & 1) {
+    mem_total = (mboot_ptr->mem_lower * 1024) +
+                (mboot_ptr->mem_upper * 1024);
 
-    console.printf("ESP: %x, %x\n", cur_esp, initial_stack);
-
-    u32 mem_total;
-    if(mboot_ptr->flags & 1) {
-      mem_total = (mboot_ptr->mem_lower * 1024) +
-                  (mboot_ptr->mem_upper * 1024);
-
-      if(mem_total > 1048576) {
-        console.printf("mem total: %dMB\n", mem_total / 1048576);
-      } else {
-        console.printf("mem total: %dB\n", mem_total);
-      }
-
+    if(mem_total > 1048576) {
+      console.printf("mem total: %dMB\n", mem_total / 1048576);
     } else {
-      console.printf("memory unknown, default to 16M\n");
-      mem_total = 0x1000000;
+      console.printf("mem total: %dB\n", mem_total);
     }
 
-    // Initialise the PIT to 100Hz
-    cpu::interrupts_on = 1;
-    cpu::enable_interrupts();
+  } else {
+    console.printf("memory unknown, default to 16M\n");
+    mem_total = 0x1000000;
+  }
 
-    timer.init(SLICE_HZ);
+  // Initialise the PIT to 100Hz
+  cpu::interrupts_on = 1;
+  cpu::enable_interrupts();
 
-    show_cpuid();
+  timer.init(SLICE_HZ);
 
-    // Find the location of our initial ramdisk.
-    ASSERT(mboot_ptr->mods_count > 0);
-    initrd_location = *((u32*)mboot_ptr->mods_addr);
-    u32 initrd_end = *(u32*)(mboot_ptr->mods_addr+4);
-    // Don't trample our module with placement accesses, please!
-    placement_address = initrd_end;
+  show_cpuid();
 
-    console.printf("initrd: 0x%x - 0x%x\n", initrd_location, initrd_end-1);
+  // Find the location of our initial ramdisk.
+  ASSERT(mboot_ptr->mods_count > 0);
+  initrd_location = *((u32*)mboot_ptr->mods_addr);
+  u32 initrd_end = *(u32*)(mboot_ptr->mods_addr+4);
+  // Don't trample our module with placement accesses, please!
+  placement_address = initrd_end;
 
-    // Start paging.
-    vmem.init(mem_total);
+  console.printf("initrd: 0x%x - 0x%x\n", initrd_location, initrd_end-1);
 
-    // Start multitasking.
-    scheduler.init();
+  // Start paging.
+  vmem.init(mem_total);
 
-    u32 sp = 0xE0000000;
+  // Start multitasking.
+  scheduler.init();
 
-    asm volatile(
-      "mov %0, %%esp\n"
-      "mov %0, %%ebp\n"
-      "jmp kmain2\n"
-    : : "r" (sp));
+  u32 sp = 0xE0000000;
 
-    return 0;
+  asm volatile(
+    "mov %0, %%esp\n"
+    "mov %0, %%ebp\n"
+    "jmp kmain2\n"
+  : : "r" (sp));
+
+  return 0;
 }
 
 void kmain2() {
   // Initialise the initial ramdisk, and set it as the filesystem root.
   fs_root = initrd::fs.init(initrd_location);
-
-  console.printf("Initrd entries: %d\n", initrd::fs.nroot_nodes);
 
   keyboard.init();
 

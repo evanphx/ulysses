@@ -38,7 +38,7 @@ namespace elf {
     }
 
     u8* buffer = (u8*)kmalloc(sizeof(Header));
-    node->read(0, node->length, buffer);
+    node->read(0, sizeof(Header), buffer);
 
     Header* hdr = (Header*)buffer;
 
@@ -48,8 +48,6 @@ namespace elf {
       return 0;
     }
 
-    console.printf("Valid elf binary!\n");
-
     if(hdr->e_phnum > 0) {
       ProgramHeader* ph = hdr->load_ph(node);
 
@@ -57,10 +55,11 @@ namespace elf {
         if(ph->load_p()) {
           page* p = vmem.get_current_page(ph->p_vaddr, 1);
           vmem.alloc_frame(p, 0, 0);
-          console.printf("mapped %x to %x\n", ph->p_vaddr, p->frame);
+          // console.printf("mapped %x to %x\n", ph->p_vaddr, p->frame);
 
           node->read(ph->p_offset, ph->p_filesz, (u8*)ph->p_vaddr); 
         }
+        ph++;
       }
 
       kfree(ph);

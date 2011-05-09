@@ -1,5 +1,11 @@
 namespace sys {
   template <typename T>
+  struct ListNode {
+    T* next;
+    T* prev;
+  };
+
+  template <typename T, int which>
   class List {
     T* head_;
     T* tail_;
@@ -27,47 +33,75 @@ namespace sys {
     void unlink(T* elem) {
       count_--;
 
-      elem->list = 0;
+      ListNode<T>& node = elem->lists[which];
 
-      if(elem->next) {
-        elem->next->prev = elem->prev;
+      if(node.next) {
+        node.next->lists[which].prev = node.prev;
       }
 
-      if(elem->prev) {
-        elem->prev->next = elem->next;
+      if(node.prev) {
+        node.prev->lists[which].next = node.next;
       }
 
       if(elem == head_) {
-        head_ = elem->next;
+        head_ = node.next;
       }
 
       if(elem == tail_) {
-        tail_ = elem->prev;
+        tail_ = node.prev;
       }
     }
 
     void append(T* elem) {
-      elem->list = this;
+      ListNode<T>& node = elem->lists[which];
+      ListNode<T>& tn = tail_->lists[which];
+
       count_++;
 
-      tail_->next = elem;
-      elem->prev = tail_;
-      elem->next = 0;
+      tn.next = elem;
+      node.prev = tail_;
+      node.next = 0;
 
       tail_ = elem;
       if(!head_) head_ = tail_;
     }
 
     void prepend(T* elem) {
-      elem->list = this;
+      ListNode<T>& node = elem->lists[which];
+      ListNode<T>& hn = head_->lists[which];
+
       count_++;
 
-      head_->prev = elem;
-      elem->next = head_;
-      elem->prev = 0;
+      hn.prev = elem;
+      node.next = head_;
+      node.prev = 0;
 
       head_ = elem;
       if(!tail_) tail_ = head_;
+    }
+
+    class Iterator {
+      T* node;
+
+    public:
+
+      Iterator(T* head)
+        : node(head)
+      {}
+
+      bool more_p() {
+        return node != 0;
+      }
+
+      T* advance() {
+        T* n = node;
+        node = node->lists[which].next;
+        return n;
+      }
+    };
+
+    Iterator begin() {
+      return Iterator(head_);
     }
 
   };

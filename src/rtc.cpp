@@ -56,9 +56,6 @@ void init_clock() {
     year -= 1;
   }
 
-  console.printf("sec: %d, min: %d, hour: %d, day: %d, mon: %d, year: %d\n",
-          sec, min, hour, day, mon, year);
-
   unsigned int year_day = 
     (year/4 - year/100 + year/400 + 367*mon/12 + day) + year*365 - 719499;
 
@@ -68,7 +65,10 @@ void init_clock() {
 
   unsigned int epoch = sec + 60 * (min + 60 * (hour + 24 * year_day));
 
-  console.printf("epoch: %d\n", epoch);
+  console.printf("Time: %2d:%2d:%2d %4d/%2d/%2d (%d)\n",
+                 hour, min, sec,
+                 year, mon, day,
+                 epoch);
 
   cur_sec = epoch;
   cur_usec = 0;

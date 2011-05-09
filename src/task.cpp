@@ -87,34 +87,31 @@ void Scheduler::init() {
 }
 
 void Scheduler::cleanup() {
-  Task* task = cleanup_queue.head();
+  Task::RunList::Iterator i = cleanup_queue.begin();
 
-  while(task) {
-    Task* nxt = task->next;
+  while(i.more_p()) {
+    Task* task = i.advance();
     cleanup_queue.unlink(task);
 
     vmem.free_directory(task->directory);
 
     kfree((void*)task->kernel_stack);
     kfree(task);
-
-    task = nxt;
   }
 }
 
 void Scheduler::on_tick() {
-  Task* task = waiting_queue.head();
-  bool schedule = false;
+  Task::RunList::Iterator i = waiting_queue.begin();
 
-  while(task) {
-    Task* nxt = task->next;
+  bool schedule = false;
+  while(i.more_p()) {
+    Task* task = i.advance();
 
     if(task->alarm_expired()) {
+      waiting_queue.unlink(task);
       make_ready(task);
       schedule = true;
     }
-
-    task = nxt;
   }
 
   if(schedule) switch_task();
@@ -135,7 +132,7 @@ void Scheduler::switch_task() {
   if(val == &second_return) return;
 
   // Get the next task to run.
-  Task* next = current->next;
+  Task* next = current->next_runnable();
 
   // If we fell off the end of the linked list start again at the beginning.
   if(!next) next = ready_queue.head();
@@ -158,14 +155,13 @@ void Scheduler::switch_task() {
   restore_registers(&current->regs, vmem.current_directory->physicalAddr);
 }
 
-void Scheduler::exit() {
+void Scheduler::exit(int code) {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
 
-  if(current->list) {
-    current->list->unlink(current);
-  }
+  ready_queue.unlink(current);
 
+  current->exit_code = code;
   current->state = Task::eDead;
   cleanup_queue.prepend(current);
 
@@ -174,12 +170,22 @@ void Scheduler::exit() {
   switch_task();
 }
 
+int Scheduler::wait_any(int *status) {
+  // We are modifying kernel structures, and so cannot be interrupted.
+  int st = cpu::disable_interrupts();
+
+  cpu::restore_interrupts(st);
+  return -1;
+
+}
+
 void Scheduler::sleep(int secs) {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
 
   current->sleep_til(secs);
 
+  ready_queue.unlink(current);
   make_wait(current);
 
   cpu::restore_interrupts(st);
@@ -189,9 +195,8 @@ void Scheduler::sleep(int secs) {
 
 Task::Task(int pid)
   : id(pid)
-  , list(0)
-  , prev(0)
-  , next(0)
+  , alarm_at(0)
+  , exit_code(0)
 {}
 
 int Scheduler::fork() {

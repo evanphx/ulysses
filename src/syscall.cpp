@@ -12,44 +12,19 @@
 
 static void syscall_handler(registers_t *regs);
 
-void sys_monitor_write(const char* p) {
-  // console.printf("syscall monitor write: %x\n", p);
+void sys_kprint(const char* p) {
   console.printf("%d: %s", scheduler.getpid(), p);
-}
-
-void sys_monitor_write_hex(int num) {
-  console.write_hex(num);
-}
-
-void sys_monitor_write_dec(int num) {
-  console.write_dec(num);
 }
 
 void sys_exec(registers_t* regs) {
   const char* path = (const char*)regs->ebx;
-  console.printf("Executing: %s\n", path);
 
   fs::Node* test = fs_root->finddir(path);
 
   u32 loc = elf::load_node(test);
 
-  console.printf("execing to %x\n", loc);
-
   regs->eip = loc;
   return;
-  /*
-    typedef int (*starter)();
-
-    starter f = (starter)hdr->e_entry;
-
-    console.printf("calling %x\n", f);
-    int out = f();
-
-    console.printf("ret => %d\n", out);
-    */
-
-    // console.printf("jumping to %x\n", hdr->e_entry);
-    // cpu::jump_to(hdr->e_entry);
 }
 
 int sys_fork() {
@@ -64,43 +39,45 @@ void sys_pause() {
   scheduler.switch_task();
 }
 
-void sys_exit() {
-  scheduler.exit();
+void sys_exit(int code) {
+  scheduler.exit(code);
 }
 
 void sys_sleep(int seconds) {
   scheduler.sleep(seconds);
 }
 
+void sys_wait_any(int* status) {
+  scheduler.wait_any(status);
+}
+
 const static u32 raw_syscall_base = 1024;
 
-DEFN_SYSCALL1(monitor_write, 0, const char*);
-DEFN_SYSCALL1(monitor_write_hex, 1, int);
-DEFN_SYSCALL1(monitor_write_dec, 2, int);
-DEFN_SYSCALL0(fork, 3);
-DEFN_SYSCALL0(getpid, 4);
-DEFN_SYSCALL0(pause, 5);
-DEFN_SYSCALL0(exit, 6);
-DEFN_SYSCALL1(sleep, 7, int);
+DEFN_SYSCALL1(kprint, 0, const char*);
+DEFN_SYSCALL0(fork, 1);
+DEFN_SYSCALL0(getpid, 2);
+DEFN_SYSCALL0(pause, 3);
+DEFN_SYSCALL1(exit, 4, int);
+DEFN_SYSCALL1(sleep, 5, int);
+DEFN_SYSCALL1(wait_any, 6, int*);
 
 DEFN_SYSCALL1(exec, raw_syscall_base + 0, const char*);
 
 static void* syscalls[] = {
-    (void*)&sys_monitor_write,
-    (void*)&sys_monitor_write_hex,
-    (void*)&sys_monitor_write_dec,
+    (void*)&sys_kprint,
     (void*)&sys_fork,
     (void*)&sys_getpid,
     (void*)&sys_pause,
     (void*)&sys_exit,
-    (void*)&sys_sleep
+    (void*)&sys_sleep,
+    (void*)&sys_wait_any
 };
 
 static void* raw_syscalls[] = {
     (void*)&sys_exec
 };
 
-const static u32 num_syscalls = 8;
+const static u32 num_syscalls = 7;
 const static u32 num_raw_syscalls = 1;
 
 void initialise_syscalls() {

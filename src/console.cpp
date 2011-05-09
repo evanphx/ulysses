@@ -265,6 +265,40 @@ void Console::printf(const char* fmt, ...) {
   va_end(ap);
 }
 
+static int hex_width(int n) {
+  int width = 1;
+
+  char noZeroes = 1;
+
+  for(int i = 28; i > 0; i -= 4) {
+    u32 tmp = (n >> i) & 0xF;
+    if(tmp == 0 && noZeroes != 0) continue;
+    noZeroes = 0;
+    width++;
+  }
+
+  return width;
+}
+
+static int dec_width(long n) {
+  int width = 0;
+
+  if(n == 0) {
+    return 1;
+  } else if(n < 0) {
+    width++;
+    n = -n;
+  }
+
+  s32 acc = n;
+  while(acc > 0) {
+    acc /= 10;
+    width++;
+  }
+
+  return width;
+}
+
 void Console::vprintf(const char* fmt, va_list ap) {
   char cur;
   char c;
@@ -302,10 +336,30 @@ retry:
         default:
         case 0:
           d = va_arg(ap, int);
+
+          if(width) {
+            int dw = dec_width(d);
+            if(width - dw >= 1) {
+              for(int i = 0; i < dw; i++) {
+                put('0');
+              }
+            }
+          }
+
           write_dec(d);
           break;
         case 1:
           l = va_arg(ap, long);
+
+          if(width) {
+            int dw = dec_width(d);
+            if(width - dw >= 1) {
+              for(int i = 0; i < dw; i++) {
+                put('0');
+              }
+            }
+          }
+
           write_dec(l);
           break;
         case 2:
@@ -321,6 +375,16 @@ retry:
       case 'X':
       case 'p':
         d = va_arg(ap, int);
+
+        if(width) {
+          int hw = hex_width(d);
+          if(width - hw >= 1) {
+            for(int i = 0; i < hw; i++) {
+              put('0');
+            }
+          }
+        }
+
         write_hex_np(d);
         break;
       case 'C':

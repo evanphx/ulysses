@@ -7,16 +7,16 @@ SOURCES=boot.o main.o console.o common.o descriptor_tables.o isr.o interrupt.o g
         kheap.o paging.o ordered_array.o fs.o initrd.o task.o process.o syscall.o \
 				keyboard.o pci.o rtl8139.o eth.o arp.o rtc.o pit.o elf.o
 
-OPT=-m32 -O0 -fno-inline
-CXXFLAGS=$(OPT) -fno-PIC -Wall -Werror -fno-rtti -fno-exceptions -nostdlib -fno-builtin -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip
+OPT=-O0 -fno-inline
+CXXFLAGS=$(OPT) -g -ggdb3 -Wall -Werror -fno-rtti -fno-exceptions -nostdlib -fno-builtin -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip
 LIBGCC=`i386-elf-gcc -print-libgcc-file-name`
 LDFLAGS=--oformat=elf32-i386 -melf_i386 -Tlink.ld
 ASFLAGS=-felf
 
-CC=x86_64-elf-g++
-CXX=x86_64-elf-g++
+CC=../buildtools/local/bin/i386-pc-ulysses-g++
+CXX=../buildtools/local/bin/i386-pc-ulysses-g++
 
-LD=x86_64-elf-ld
+LD=../buildtools/local/bin/i386-pc-ulysses-ld
 
 all: $(SOURCES) link
 

@@ -30,6 +30,15 @@ struct Task {
     eDead
   };
 
+  enum Lists {
+    cRun = 0,
+    cChild = 1,
+    cTotal = 2
+  };
+
+  typedef sys::List<Task, cRun> RunList;
+  typedef sys::List<Task, cChild> ChildList;
+
   Task(int pid);
 
   int id;              // Process ID.
@@ -39,11 +48,13 @@ struct Task {
   u32 kernel_stack;   // Kernel stack location.
 
   u32 alarm_at;
+  int exit_code;
 
-  sys::List<Task>* list;
+  sys::ListNode<Task> lists[cTotal];
 
-  Task* prev;     // prev task in a linked list.
-  Task* next;     // The next task in a linked list.
+  Task* next_runnable() {
+    return lists[cRun].next;
+  }
 
   void sleep_til(int secs);
   bool alarm_expired();
@@ -53,28 +64,19 @@ struct Scheduler {
   u32 next_pid;
   Task* current;
 
-  sys::List<Task> ready_queue;
-  sys::List<Task> cleanup_queue;
-  sys::List<Task> waiting_queue;
+  Task::RunList ready_queue;
+  Task::RunList cleanup_queue;
+  Task::RunList waiting_queue;
 
   void init();
 
   void make_ready(Task* task) {
-    if(task->list) {
-      task->list->unlink(task);
-    }
-
     task->state = Task::eReady;
     ready_queue.prepend(task);
   }
 
   void make_wait(Task* task) {
-    if(task->list) {
-      task->list->unlink(task);
-    }
-
     task->state = Task::eWaiting;
-
     waiting_queue.prepend(task);
   }
 
@@ -82,10 +84,11 @@ struct Scheduler {
   void switch_task();
   int fork();
 
-  void exit();
+  void exit(int code);
   void sleep(int secs);
 
   int getpid();
+  int wait_any(int* status);
 
   void switch_to_user_mode();
   void on_tick();
