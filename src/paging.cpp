@@ -15,28 +15,25 @@ extern "C" {
 }
 
 // Function to allocate a frame.
-void VirtualMemory::alloc_frame(page *page, bool is_kernel, bool is_writeable) {
+void VirtualMemory::alloc_frame(x86::Page* page, bool is_kernel, bool is_writeable) {
   if(page->frame != 0) return;
-  u32 idx = first_frame();
-  if(idx == (u32)-1) {
-    // PANIC! no free frames!!
-    kabort();
-  }
+  bool ok = false;
 
-  set_frame(idx*0x1000);
-  page->present = 1;
-  page->rw = (is_writeable ? 1 : 0);
-  page->user = (is_kernel ? 0 : 1);
-  page->frame = idx;
+  u32 idx = first_frame(ok);
+  if(!ok) kabort();
+
+  set_frame(idx * cpu::cPageSize);
+
+  page->assign(idx, is_writeable, is_kernel);
 }
 
 // Function to deallocate a frame.
-void VirtualMemory::free_frame(page *page) {
+void VirtualMemory::free_frame(x86::Page* page) {
   u32 frame = page->frame;
 
   if(!frame) return;
   clear_frame(frame);
-  page->frame = 0x0;
+  page->clear();
 }
 
 bool MemoryMapping::fulfill(Task* task, u32 request) {
@@ -58,7 +55,7 @@ bool MemoryMapping::fulfill(Task* task, u32 request) {
 
   u32 zero_fill_size = cpu::cPageSize - target_size;
 
-  page* p = vmem.get_current_page(page_address, 1);
+  x86::Page* p = vmem.get_current_page(page_address, 1);
   vmem.alloc_user_frame(p, writable_p());
 
   /*
@@ -129,13 +126,13 @@ void VirtualMemory::init(u32 total_memory) {
   // assume it is 16MB big.
   u32 mem_end_page = total_memory;
 
-  nframes = mem_end_page / 0x1000;
+  nframes = mem_end_page / cpu::cPageSize;
   frames = (u32*)kmalloc(INDEX_FROM_BIT(nframes));
   memset((u8int*)frames, 0, INDEX_FROM_BIT(nframes));
 
   // Let's make a page directory.
-  kernel_directory = (page_directory*)kmalloc_a(sizeof(page_directory));
-  memset((u8int*)kernel_directory, 0, sizeof(page_directory));
+  kernel_directory = (x86::PageDirectory*)kmalloc_a(sizeof(x86::PageDirectory));
+  memset((u8int*)kernel_directory, 0, sizeof(x86::PageDirectory));
   kernel_directory->physicalAddr = (u32)kernel_directory->tablesPhysical;
 
   // Map some pages in the kernel heap area.
@@ -143,7 +140,7 @@ void VirtualMemory::init(u32 total_memory) {
   // to be created where necessary. We can't allocate frames yet because they
   // they need to be identity mapped first below, and yet we can't increase
   // placement_address between identity mapping and enabling the heap!
-  for(u32 i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += 0x1000) {
+  for(u32 i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += cpu::cPageSize) {
     get_page(i, 1, kernel_directory);
   }
 
@@ -157,13 +154,13 @@ void VirtualMemory::init(u32 total_memory) {
   // Allocate a lil' bit extra so the kernel heap can be
   // initialised properly.
 
-  for(u32 i = 0; i < placement_address + 0x1000; i += 0x1000) {
+  for(u32 i = 0; i < placement_address + cpu::cPageSize; i += cpu::cPageSize) {
     // Kernel code is readable but not writeable from userspace.
     alloc_user_frame(get_page(i, 1, kernel_directory));
   }
 
   // Now allocate those pages we mapped earlier.
-  for(u32 i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += 0x1000) {
+  for(u32 i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += cpu::cPageSize) {
     alloc_user_frame(get_page(i, 1, kernel_directory));
   }
 
@@ -180,16 +177,16 @@ void VirtualMemory::init(u32 total_memory) {
   switch_page_directory(current_directory);
 }
 
-void VirtualMemory::switch_page_directory(page_directory *dir) {
+void VirtualMemory::switch_page_directory(x86::PageDirectory* dir) {
   current_directory = dir;
 
   cpu::set_page_directory(dir->physicalAddr);
   cpu::enable_paging();
 }
 
-page* VirtualMemory::get_page(u32 address, int make, page_directory *dir) {
+x86::Page* VirtualMemory::get_page(u32 address, int make, x86::PageDirectory* dir) {
   // Turn the address into an index.
-  address /= 0x1000;
+  address /= cpu::cPageSize;
   // Find the page table containing this address.
   u32 table_idx = address / 1024;
 
@@ -197,8 +194,8 @@ page* VirtualMemory::get_page(u32 address, int make, page_directory *dir) {
     return &dir->tables[table_idx]->pages[address%1024];
   } else if(make) {
     u32 tmp;
-    dir->tables[table_idx] = (page_table*)kmalloc_ap(sizeof(page_table), &tmp);
-    memset((u8int*)dir->tables[table_idx], 0, 0x1000);
+    dir->tables[table_idx] = (x86::PageTable*)kmalloc_ap(sizeof(x86::PageTable), &tmp);
+    memset((u8int*)dir->tables[table_idx], 0, cpu::cPageSize);
     dir->tablesPhysical[table_idx] = tmp | 0x7; // PRESENT, RW, US.
     return &dir->tables[table_idx]->pages[address%1024];
   } else {
@@ -206,22 +203,22 @@ page* VirtualMemory::get_page(u32 address, int make, page_directory *dir) {
   }
 }
 
-page* VirtualMemory::get_kernel_page(u32 address, int make) {
+x86::Page* VirtualMemory::get_kernel_page(u32 address, int make) {
   return get_page(address, make, kernel_directory);
 }
 
-page* VirtualMemory::get_current_page(u32 address, int make) {
+x86::Page* VirtualMemory::get_current_page(u32 address, int make) {
   return get_page(address, make, current_directory);
 }
 
 extern "C" void copy_page_physical(int, int);
 
-page_table* VirtualMemory::clone_table(page_table *src, u32 *physAddr) {
+x86::PageTable* VirtualMemory::clone_table(x86::PageTable* src, u32 *phys) {
   // Make a new page table, which is page aligned.
-  page_table *table = (page_table*)kmalloc_ap(sizeof(page_table), physAddr);
+  x86::PageTable* table = knew_phys<x86::PageTable>(phys);
 
   // Ensure that the new table is blank.
-  memset((u8int*)table, 0, sizeof(page_table));
+  memset((u8int*)table, 0, sizeof(x86::PageTable));
 
   // For every entry in the table...
   for(int i = 0; i < 1024; i++) {
@@ -230,6 +227,7 @@ page_table* VirtualMemory::clone_table(page_table *src, u32 *physAddr) {
 
     // Get a new frame.
     alloc_user_frame(&table->pages[i]);
+
     // Clone the flags from source to destination.
     if(src->pages[i].present)  table->pages[i].present = 1;
     if(src->pages[i].rw)       table->pages[i].rw = 1;
@@ -238,13 +236,14 @@ page_table* VirtualMemory::clone_table(page_table *src, u32 *physAddr) {
     if(src->pages[i].dirty)    table->pages[i].dirty = 1;
 
     // Physically copy the data across. This function is in process.s.
-    copy_page_physical(src->pages[i].frame*0x1000, table->pages[i].frame*0x1000);
+    copy_page_physical(  src->pages[i].frame * cpu::cPageSize,
+                       table->pages[i].frame * cpu::cPageSize);
   }
 
   return table;
 }
 
-void VirtualMemory::free_table(page_table* src) {
+void VirtualMemory::free_table(x86::PageTable* src) {
   for(int i = 0; i < 1024; i++) {
     if(!src->pages[i].frame) continue;
     free_frame(&src->pages[i]);
@@ -253,12 +252,12 @@ void VirtualMemory::free_table(page_table* src) {
   kfree(src);
 }
 
-page_directory* VirtualMemory::clone_directory(page_directory *src) {
+x86::PageDirectory* VirtualMemory::clone_directory(x86::PageDirectory* src) {
   u32 phys;
   // Make a new page directory and obtain its physical address.
-  page_directory *dir = (page_directory*)kmalloc_ap(sizeof(page_directory), &phys);
+  x86::PageDirectory* dir = knew_phys<x86::PageDirectory>(&phys);
   // Ensure that it is blank.
-  memset((u8int*)dir, 0, sizeof(page_directory));
+  memset((u8int*)dir, 0, sizeof(x86::PageDirectory));
 
   // Get the offset of tablesPhysical from the start of the page_directory structure.
   u32 offset = (u32)dir->tablesPhysical - (u32)dir;
@@ -284,7 +283,7 @@ page_directory* VirtualMemory::clone_directory(page_directory *src) {
   return dir;
 }
 
-void VirtualMemory::free_directory(page_directory* dir) {
+void VirtualMemory::free_directory(x86::PageDirectory* dir) {
   for(int i = 0; i < 1024; i++) {
     if(!dir->tables[i]) continue;
 
@@ -296,6 +295,6 @@ void VirtualMemory::free_directory(page_directory* dir) {
   kfree(dir);
 }
 
-page_directory* VirtualMemory::clone_current() {
+x86::PageDirectory* VirtualMemory::clone_current() {
   return clone_directory(current_directory);
 }

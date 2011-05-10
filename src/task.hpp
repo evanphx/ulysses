@@ -45,7 +45,7 @@ struct Task {
   int id;              // Process ID.
   SavedRegisters regs;
   State state;
-  page_directory* directory; // Page directory.
+  x86::PageDirectory* directory; // Page directory.
   u32 kernel_stack;   // Kernel stack location.
 
   u32 alarm_at;

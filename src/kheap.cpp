@@ -18,7 +18,7 @@ Allocation Heap::allocate(u32 size, int align=0) {
 
   void *addr = kheap->alloc(sz, (u8)align);
 
-  page *page = vmem.get_kernel_page((u32)addr, 0);
+  x86::Page* page = vmem.get_kernel_page((u32)addr, 0);
   void* phys = page->frame*0x1000 + ((u32)addr&0xFFF);
 
   Allocation alloc = {addr, phys};
@@ -41,7 +41,7 @@ u32 kmalloc_int(u32 sz, int align, u32 *phys) {
 
     void *addr = kheap->alloc(sz, (u8)align);
     if(phys != 0) {
-      page *page = vmem.get_kernel_page((u32)addr, 0);
+      x86::Page* page = vmem.get_kernel_page((u32)addr, 0);
       *phys = page->frame*0x1000 + ((u32)addr&0xFFF);
     }
 

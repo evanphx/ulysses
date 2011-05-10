@@ -133,6 +133,11 @@ T* knew() {
 }
 
 template <typename T>
+T* knew_phys(u32* phys) {
+  return (T*)kmalloc_ap(sizeof(T), phys);
+}
+
+template <typename T>
 T* knew_array(int size) {
   int max = sizeof(T) * size;
   char* ptr = (char*)kmalloc(max);

@@ -186,7 +186,7 @@ int Scheduler::fork() {
   int st = cpu::disable_interrupts();
 
   // Clone the address space.
-  page_directory* directory = vmem.clone_current();
+  x86::PageDirectory* directory = vmem.clone_current();
 
   // Create a new process.
   Task* new_task = new(kheap) Task(next_pid++);

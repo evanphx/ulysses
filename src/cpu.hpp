@@ -1,7 +1,11 @@
+#ifndef CPU_HPP
+#define CPU_HPP
+
 namespace cpu {
 
   static const unsigned int cPageSize = 0x1000;
   static const unsigned int cPageMask = ~0xfff;
+  static const unsigned int cMaxAddress = 0xFFFFFFFF;
 
   static int interrupts_on = 0;
 
@@ -64,3 +68,5 @@ namespace cpu {
   }
 
 }
+
+#endif

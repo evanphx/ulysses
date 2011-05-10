@@ -81,53 +81,53 @@ void PCIBus::scan() {
     u32 vendor_id = vendor & 0xffff;
     u32 device_id = vendor >> 16;
 
-    // u32 klass = configl(device, PCI_CLASS_REVISION) >> 16;
+    u32 klass = configl(device, PCI_CLASS_REVISION) >> 16;
 
     /* console.write("PCI Device: header="); */
     /* console.write_hex(header); */
-    // console.printf("%04x:%04x:%04x   ", vendor_id, device_id, klass);
+    console.printf("%04x:%04x:%04x   ", vendor_id, device_id, klass);
 
     int found_vendor = 0;
 
     for(u32 i = 0; i < PCI_VENTABLE_LEN; i++) {
       if(PciVenTable[i].VenId == vendor_id) {
-        // console.write(PciVenTable[i].VenShort);
+        console.write(PciVenTable[i].VenShort);
         found_vendor = 1;
       }
     }
 
     if(!found_vendor) {
-      // console.write("Unknown vendor");
+      console.write("Unknown vendor");
     }
 
-    // console.write(", ");
+    console.write(", ");
 
     int found_device = 1;
 
     for(u32 i = 0; i < PCI_DEVTABLE_LEN; i++) {
       if(PciDevTable[i].VenId == vendor_id &&
           PciDevTable[i].DevId == device_id) {
-        // console.write(PciDevTable[i].Chip);
+        console.write(PciDevTable[i].Chip);
         found_device = 1;
       }
     }
 
     if(!found_device) {
-      // console.write("Unknown device");
+      console.write("Unknown device");
     }
 
-    // console.write(", ");
-    // console.write(class2name(klass));
+    console.write(", ");
+    console.write(class2name(klass));
 
     u8 irq = configb(device, PCI_IRQ);
     u32 io_port = configl(device, PCI_BAR_0) & ~3;
 
-    // console.write(" irq=");
-    // console.write_dec(irq);
-    // console.write(", io=");
-    // console.write_hex(io_port);
+    console.write(" irq=");
+    console.write_dec(irq);
+    console.write(", io=");
+    console.write_hex(io_port);
 
-    // console.write("\n");
+    console.write("\n");
 
     if(device_id == 0x8139) {
       init_rtl8139(io_port, irq);
