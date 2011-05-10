@@ -3,6 +3,7 @@
 
 #include "common.hpp"
 #include "fs.hpp"
+#include "paging.hpp"
 
 namespace elf {
 
@@ -75,6 +76,12 @@ namespace elf {
     PT_HIPROC = 0x7fffffff
   };
 
+  enum ProgramHeaderFlags {
+    PF_R = 0x4,
+    PF_W = 0x2,
+    PF_X = 0x1
+  };
+
   enum MachineType {
     MT_NONE = 0,
     MT_X86  = 3,
@@ -98,6 +105,27 @@ namespace elf {
 
     bool load_p() {
       return p_type == PT_LOAD;
+    }
+
+    bool readable_p() {
+      return (p_flags & PF_R) == PF_R;
+    }
+
+    bool writable_p() {
+      return (p_flags & PF_W) == PF_W;
+    }
+
+    bool executable_p() {
+      return (p_flags & PF_X) == PF_X;
+    }
+
+    int mmap_flags() {
+      int flags = 0;
+      if(readable_p()) flags |= MemoryMapping::eReadable;
+      if(writable_p()) flags |= MemoryMapping::eWritable;
+      if(executable_p()) flags |= MemoryMapping::eExecutable;
+
+      return flags;
     }
 
   };

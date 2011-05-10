@@ -38,6 +38,7 @@ struct Task {
 
   typedef sys::List<Task, cRun> RunList;
   typedef sys::List<Task, cChild> ChildList;
+  typedef sys::ExternalList<MemoryMapping> MMapList;
 
   Task(int pid);
 
@@ -51,6 +52,7 @@ struct Task {
   int exit_code;
 
   sys::ListNode<Task> lists[cTotal];
+  MMapList mmaps;
 
   Task* next_runnable() {
     return lists[cRun].next;
@@ -58,6 +60,9 @@ struct Task {
 
   void sleep_til(int secs);
   bool alarm_expired();
+
+  void add_mmap(fs::Node* node, u32 offset, u32 size, u32 addr, u32 mem_size, int flags);
+  MemoryMapping* find_mapping(u32 addr);
 };
 
 struct Scheduler {

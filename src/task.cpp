@@ -29,6 +29,26 @@ bool Task::alarm_expired() {
          alarm_at <= timer.ticks;
 }
 
+
+void Task::add_mmap(fs::Node* node, u32 offset, u32 size, u32 addr, u32 mem_size,
+                    int flags)
+{
+  MemoryMapping mapping(addr, mem_size, node, offset, size, flags);
+  mmaps.append(mapping);
+}
+
+MemoryMapping* Task::find_mapping(u32 addr) {
+  Task::MMapList::Iterator i = mmaps.begin();
+
+  while(i.more_p()) {
+    MemoryMapping& mmap = i.advance();
+
+    if(mmap.contains_p(addr)) return &mmap;
+  }
+
+  return 0;
+}
+
 extern "C" void* save_registers(volatile Task::SavedRegisters*);
 extern "C" void restore_registers(volatile Task::SavedRegisters*, u32);
 extern "C" void second_return();

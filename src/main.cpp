@@ -103,7 +103,7 @@ int kmain(struct multiboot *mboot_ptr, u32 initial_stack) {
   u32 size = cpu::cPageSize * 2;
 
   for(u32 i = sp; i >= sp-size; i -= cpu::cPageSize) {
-    vmem.alloc_frame(vmem.get_current_page(i, 1), 0, 1);
+    vmem.alloc_kernel_frame(vmem.get_current_page(i, 1), true);
   }
 
   cpu::flush_tbl();

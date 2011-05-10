@@ -5,6 +5,7 @@
 #include "kheap.hpp"
 #include "monitor.hpp"
 #include "cpu.hpp"
+#include "task.hpp"
 
 VirtualMemory vmem = {0, 0, 0, 0};
 
@@ -14,7 +15,7 @@ extern "C" {
 }
 
 // Function to allocate a frame.
-void VirtualMemory::alloc_frame(page *page, int is_kernel, int is_writeable) {
+void VirtualMemory::alloc_frame(page *page, bool is_kernel, bool is_writeable) {
   if(page->frame != 0) return;
   u32 idx = first_frame();
   if(idx == (u32)-1) {
@@ -24,8 +25,8 @@ void VirtualMemory::alloc_frame(page *page, int is_kernel, int is_writeable) {
 
   set_frame(idx*0x1000);
   page->present = 1;
-  page->rw = (is_writeable==1)?1:0;
-  page->user = (is_kernel==1)?0:1;
+  page->rw = (is_writeable ? 1 : 0);
+  page->user = (is_kernel ? 0 : 1);
   page->frame = idx;
 }
 
@@ -38,16 +39,65 @@ void VirtualMemory::free_frame(page *page) {
   page->frame = 0x0;
 }
 
+bool MemoryMapping::fulfill(Task* task, u32 request) {
+  u32 page_address = request & cpu::cPageMask;
+  u32 request_offset = page_address - address_;
+
+  u32 target_offset = offset_ + request_offset;
+
+  u32 target_size;
+  if(request_offset > file_size_) {
+    target_size = 0;
+  } else {
+    target_size = file_size_ - request_offset;
+    // We only fill one page, so clamp the target_size
+    if(target_size > cpu::cPageSize) {
+      target_size = cpu::cPageSize;
+    }
+  }
+
+  u32 zero_fill_size = cpu::cPageSize - target_size;
+
+  page* p = vmem.get_current_page(page_address, 1);
+  vmem.alloc_user_frame(p, writable_p());
+
+  /*
+  console.printf("on-demand mapped %x to %x for %x (offset=%d, size=%d)\n",
+                 page_address, p->frame, request,
+                 target_offset, target_size);
+  */
+
+  if(target_size > 0) {
+    node_->read(target_offset, target_size, (u8*)page_address);
+  }
+
+  if(zero_fill_size > 0) {
+    memset((u8*)page_address + target_size, 0, zero_fill_size);
+  }
+
+  return true;
+}
+
 static void page_fault(registers_t *regs) {
   // A page fault has occurred.
   // The faulting address is stored in the CR2 register.
   u32 faulting_address = cpu::fault_address();
 
+  MemoryMapping* mmap = scheduler.current->find_mapping(faulting_address);
+
   // The error code gives us details of what happened.
-  int present   = !(regs->err_code & 0x1); // Page not present
-  int rw = regs->err_code & 0x2;           // Write operation?
-  int us = regs->err_code & 0x4;           // Processor was in user-mode?
-  int reserved = regs->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
+  bool present = !(regs->err_code & 0x1); // Page not present
+  bool rw = regs->err_code & 0x2;           // Write operation?
+  bool us = regs->err_code & 0x4;           // Processor was in user-mode?
+  bool reserved = regs->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
+
+  // Ok, this is for a mapping in the current process.
+  if(mmap) {
+    if(!rw || mmap->writable_p()) {
+      if(mmap->fulfill(scheduler.current, faulting_address)) return;
+    }
+  }
+
   // int id = regs->err_code & 0x10;          // Caused by an instruction fetch?
 
   // Output an error message.
@@ -56,9 +106,7 @@ static void page_fault(registers_t *regs) {
   if(rw) console.write("read-only ");
   if(us) console.write("user-mode ");
   if(reserved) console.write("reserved ");
-  console.write(") at ");
-  console.write_hex(faulting_address);
-  console.write("\n");
+  console.printf(") at 0x%x\n", faulting_address);
 
   console.printf("ds: %x\n", regs->ds);
   console.printf("edi: %x, esi: %x, ebp: %x, esp: %x\n",
@@ -111,12 +159,12 @@ void VirtualMemory::init(u32 total_memory) {
 
   for(u32 i = 0; i < placement_address + 0x1000; i += 0x1000) {
     // Kernel code is readable but not writeable from userspace.
-    alloc_frame( get_page(i, 1, kernel_directory), 0, 0);
+    alloc_user_frame(get_page(i, 1, kernel_directory));
   }
 
   // Now allocate those pages we mapped earlier.
   for(u32 i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += 0x1000) {
-    alloc_frame( get_page(i, 1, kernel_directory), 0, 0);
+    alloc_user_frame(get_page(i, 1, kernel_directory));
   }
 
   // Before we enable paging, we must register our page fault handler.
@@ -181,7 +229,7 @@ page_table* VirtualMemory::clone_table(page_table *src, u32 *physAddr) {
     if(!src->pages[i].frame) continue;
 
     // Get a new frame.
-    alloc_frame(&table->pages[i], 0, 0);
+    alloc_user_frame(&table->pages[i]);
     // Clone the flags from source to destination.
     if(src->pages[i].present)  table->pages[i].present = 1;
     if(src->pages[i].rw)       table->pages[i].rw = 1;

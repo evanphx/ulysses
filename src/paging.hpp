@@ -6,6 +6,7 @@
 
 #include "common.hpp"
 #include "isr.hpp"
+#include "fs.hpp"
 
 struct page {
   u32int present    : 1;   // Page present in memory
@@ -40,6 +41,70 @@ struct page_directory {
   u32 physicalAddr;
 };
 
+struct Task;
+
+class MemoryMapping {
+  u32 address_;
+  u32 mem_size_;
+
+  fs::Node* node_;
+  u32 offset_;
+  u32 file_size_;
+
+  int flags_;
+
+public:
+  enum Flags {
+    eReadable = 1,
+    eWritable = 2,
+    eExecutable = 4
+  };
+
+  MemoryMapping(u32 address, u32 mem_size, fs::Node* node, u32 offset, u32 size,
+                int flags)
+    : address_(address)
+    , mem_size_(mem_size)
+    , node_(node)
+    , offset_(offset)
+    , file_size_(size)
+    , flags_(flags)
+  {}
+
+  u32 address() {
+    return address_;
+  }
+
+  u32 mem_size() {
+    return mem_size_;
+  }
+
+  fs::Node* node() {
+    return node_;
+  }
+
+  u32 offset() {
+    return offset_;
+  }
+
+  u32 file_size() {
+    return file_size_;
+  }
+
+  bool contains_p(u32 addr) {
+    return addr >= address_ && addr < address_ + mem_size_;
+  }
+
+  bool readable_p() {
+    return (flags_ & eReadable) == eReadable;
+  }
+
+  bool writable_p() {
+    return (flags_ & eWritable) == eWritable;
+  }
+
+  bool fulfill(Task* task, u32 addr);
+};
+
 struct VirtualMemory {
   // The kernel's page directory
   page_directory* kernel_directory;
@@ -51,7 +116,17 @@ struct VirtualMemory {
   u32  nframes;
 
   void init(u32 total_memory);
-  void alloc_frame(page *page, int is_kernel, int is_writeable);
+
+  void alloc_frame(page *page, bool is_kernel=false, bool is_writeable=false);
+
+  void alloc_kernel_frame(page* page, bool writable=false) {
+    alloc_frame(page, true, writable);
+  }
+
+  void alloc_user_frame(page* page, bool writable=false) {
+    alloc_frame(page, false, writable);
+  }
+
   void free_frame(page *page);
 
   void switch_page_directory(page_directory *dir);

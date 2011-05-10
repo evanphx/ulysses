@@ -111,8 +111,11 @@ static void expand(u32 new_size, Heap *heap) {
 
   u32 i = old_size;
   while(i < new_size) {
-    vmem.alloc_frame( vmem.get_kernel_page(heap->start_address+i, 1),
-        (heap->supervisor)?1:0, (heap->readonly)?0:1);
+    vmem.alloc_frame(
+        vmem.get_kernel_page(heap->start_address+i, 1),
+        (heap->supervisor)?1:0,
+        (heap->readonly)?0:1
+    );
     i += 0x1000 /* page size */;
   }
 

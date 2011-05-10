@@ -1,6 +1,7 @@
 namespace cpu {
 
-  static const int cPageSize = 0x1000;
+  static const unsigned int cPageSize = 0x1000;
+  static const unsigned int cPageMask = ~0xfff;
 
   static int interrupts_on = 0;
 

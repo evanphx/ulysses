@@ -4,6 +4,7 @@
 #include "fs.hpp"
 #include "paging.hpp"
 #include "cpu.hpp"
+#include "task.hpp"
 
 namespace elf {
 
@@ -54,11 +55,9 @@ namespace elf {
 
       for(int i = 0; i < hdr->e_phnum; i++) {
         if(ph->load_p()) {
-          page* p = vmem.get_current_page(ph->p_vaddr, 1);
-          vmem.alloc_frame(p, 0, 0);
-          // console.printf("mapped %x to %x\n", ph->p_vaddr, p->frame);
-
-          node->read(ph->p_offset, ph->p_filesz, (u8*)ph->p_vaddr); 
+          scheduler.current->add_mmap(node, ph->p_offset, ph->p_filesz,
+                                      ph->p_vaddr, ph->p_memsz,
+                                      ph->mmap_flags());
         }
         ph++;
       }
