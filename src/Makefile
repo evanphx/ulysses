@@ -7,10 +7,15 @@ COBJECTS=main.o console.o common.o descriptor_tables.o isr.o timer.o \
         kheap.o paging.o ordered_array.o fs.o initrd.o task.o syscall.o \
 				keyboard.o pci.o rtl8139.o eth.o arp.o rtc.o pit.o elf.o
 
+# ORDER MATTERS! boot.o must be first so that it's first
+# when passed to ld so that it's located at the start address!
 SOBJECTS=boot.o interrupt.o gdt.o process.o
 
-SOURCES=$(COBJECTS:.o=.cpp) $(SOBJECTS:.o=.s)
-OBJECTS=$(COBJECTS) $(SOBJECTS)
+SOURCES=$(COBJECTS:.o=.cpp)
+SOURCES+=$(SOBJECTS:.o=.s)
+
+OBJECTS=$(SOBJECTS)
+OBJECTS+=$(COBJECTS)
 
 OPT=-O0 -fno-inline
 CXXFLAGS=$(OPT) -g -ggdb3 -Wall -Werror -fno-rtti -fno-exceptions -nostdlib -fno-builtin -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip
@@ -23,7 +28,7 @@ CXX=../buildtools/local/bin/i386-pc-ulysses-g++
 
 LD=../buildtools/local/bin/i386-pc-ulysses-ld
 
-all: link
+all: src/kernel
 
 dep:
 	$(CC) $(CXXFLAGS) -MM $(SOURCES) > depend
@@ -31,7 +36,7 @@ dep:
 clean:
 	-rm *.o kernel
 
-link: $(OBJECTS)
+src/kernel: $(OBJECTS)
 	cd lwip; make
 	$(LD) $(LDFLAGS) -o kernel $(OBJECTS) liblwip4.a $(LIBGCC)
 
