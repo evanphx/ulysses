@@ -3,6 +3,7 @@
 #include "eth.hpp"
 #include "kheap.hpp"
 #include "rtl8139.hpp"
+#include "pci.hpp"
 
 #define IN_KERNEL
 
@@ -415,6 +416,17 @@ void init_rtl8139(u32int io, u8int irq) {
 
   netif_set_default(&rtl8139_lwip_netif);
   netif_set_up(&rtl8139_lwip_netif);
+}
+
+void RTL8139::detect() {
+  pci::DeviceList::Iterator i = pci_bus.devices.begin();
+  while(i.more_p()) {
+    pci::Device* dev = i.advance();
+    if(dev->device_id() == 0x8139) {
+      dev->show();
+      init_rtl8139(dev->io_port(0), dev->irq());
+    }
+  }
 }
 
 void RTL8139::init() {

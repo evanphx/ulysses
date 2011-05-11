@@ -42,6 +42,8 @@ struct RTL8139 {
   void transmit(u8* buf, int size);
 
   void init();
+
+  static void detect();
 };
 
 void init_rtl8139(u32int io_port, u8int irq);

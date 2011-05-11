@@ -1,3 +1,6 @@
+#ifndef LIST_HPP
+#define LIST_HPP
+
 #include "kheap.hpp"
 
 namespace sys {
@@ -230,3 +233,5 @@ namespace sys {
 
   };
 };
+
+#endif
