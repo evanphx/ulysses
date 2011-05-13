@@ -45,6 +45,13 @@ u32int inl(u16int port) {
     return ret;
 }
 
+void insl(u16 port, u32 buffer, u32 count) {
+  while(count--) {
+    *(u32*)buffer = inl(port);
+    buffer += 4;
+  }
+}
+
 // Copy len bytes from src to dest.
 void memcpy(u8int *dest, const u8int *src, u32int len)
 {

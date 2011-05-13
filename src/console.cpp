@@ -232,7 +232,7 @@ void Console::write_dec_ll(u64 n) {
   if(n == 0) {
     put('0');
     return;
-  } else if(n < 0) {
+  } else if((s64)n < 0) {
     put('-');
     n = -n;
   }

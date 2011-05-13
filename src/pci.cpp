@@ -3,6 +3,7 @@
 #include "pci_db.hpp"
 #include "rtl8139.hpp"
 #include "kheap.hpp"
+#include "ata.hpp"
 
 #define CMD(bus, device, var)   (0x80000000 | (bus << 16) | (device << 8) | (var & ~3))
 
@@ -10,6 +11,12 @@
 #define PCI_DEVICE_ID  0x02
 #define PCI_CLASS_REVISION	0x08
 #define PCI_HEADER_VAR 0x0e
+
+#define PCI_HEADER_TYPE_NORMAL 0
+#define PCI_PRIMARY_BUS 0x18
+
+#define PCI_SUB_VENDOR_ID 0x2c
+#define PCI_SUB_DEVICE_ID 0x2e
 
 #define PCI_BAR_0 0x10
 #define PCI_BAR_1 0x14
@@ -70,6 +77,11 @@ namespace pci {
   u8 Bus::configb(u8 device, u8 var) {
     io2.outl(CMD(bus, device, var));
     return var_io.inb(var & 3);
+  }
+
+  u16 Bus::configw(u8 device, u8 var) {
+    io2.outl(CMD(bus, device, var));
+    return var_io.inw();
   }
 
   u32 Bus::configl(u8 device, u8 var) {
@@ -153,22 +165,32 @@ namespace pci {
     read_bar(3, PCI_BAR_3);
     read_bar(4, PCI_BAR_4);
     read_bar(5, PCI_BAR_5);
+
+    if(bridge_) {
+      bus_->write_configl(device_, PCI_PRIMARY_BUS, 1);
+      // u32 bus_num = bus_->configl(device_, PCI_PRIMARY_BUS);
+    }
   }
 
   void Bus::scan() {
     //console.write("Scanning PCI bus:\n");
 
-    for(int device = 0; device < 0xff; device++) {
-      // u32 header = configb(device, PCI_HEADER_VAR);
-
+    for(int device = 0; device < 0x100; device++) {
       u32 vendor = configl(device, PCI_VENDOR_ID);
 
       if(vendor == 0xffffffff || vendor == 0x0) continue;
 
+      u32 header = configb(device, PCI_HEADER_VAR);
+
+      bool bridge = (header != PCI_HEADER_TYPE_NORMAL);
+
       u32 klass = configl(device, PCI_CLASS_REVISION) >> 16;
 
-      Device* dev = new(kheap) Device(this, vendor, device, klass);
+      Device* dev = new(kheap) Device(this, vendor, device, klass, bridge);
       dev->read_settings();
+
+      console.printf("dev: %x ", device);
+      dev->show();
 
       devices.append(dev);
     }
@@ -194,6 +216,7 @@ namespace pci {
     scan();
 
     RTL8139::detect();
+    ata::detect();
   }
 
 }

@@ -19,6 +19,7 @@ namespace pci {
     DeviceList devices;
 
     u8 configb(u8 device, u8 var);
+    u16 configw(u8 device, u8 var);
     u32 configl(u8 device, u8 var);
     void write_configl(u8 device, u8 var, u32 val);
 
@@ -54,6 +55,7 @@ namespace pci {
 
   private:
     Bus* bus_;
+    bool bridge_;
     u32 vendor_;
     u32 device_;
     u32 klass_;
@@ -62,8 +64,9 @@ namespace pci {
     Resource resources_[6];
 
   public:
-    Device(Bus* bus, u32 v, u32 d, u32 k)
+    Device(Bus* bus, u32 v, u32 d, u32 k, bool bridge=false)
       : bus_(bus)
+      , bridge_(bridge)
       , vendor_(v)
       , device_(d)
       , klass_(k)
@@ -88,6 +91,10 @@ namespace pci {
       }
 
       return 0;
+    }
+
+    u32 configl(u32 cmd) {
+      return bus_->configl(device_, cmd);
     }
 
     static const char* class2name(int klass);

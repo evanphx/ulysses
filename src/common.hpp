@@ -34,6 +34,8 @@ u8int inb(u16int port);
 u16int inw(u16int port);
 u32int inl(u16int port);
 
+void insl(u16 port, u32 buffer, u32 size);
+
 #define PANIC(msg) panic(msg, __FILE__, __LINE__);
 #define ASSERT(b) ((b) ? (void)0 : panic_assert(__FILE__, __LINE__, #b))
 

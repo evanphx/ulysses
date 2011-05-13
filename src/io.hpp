@@ -6,6 +6,16 @@
 struct IOPort {
   u16 port;
 
+  /*
+  explicit IOPort()
+    : port(0)
+  {}
+
+  explicit IOPort(u16 p)
+    : port(p)
+  {}
+  */
+
   void outb(u8 value, int offset=0) {
     u16 dest = port + offset;
     asm volatile ("outb %1, %0" : : "dN" (dest), "a" (value));
