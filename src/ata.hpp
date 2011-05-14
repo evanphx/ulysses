@@ -2,6 +2,7 @@
 #define ATA_HPP
 
 #include "string.hpp"
+#include "block.hpp"
 
 namespace ata {
   struct DriveInfo {
@@ -111,29 +112,36 @@ namespace ata {
 
   void fixstring(u8* s, int count);
 
-  class Disk {
-    sys::FixedString<8> name_;
+  class Disk : public block::Device {
     IOPort io_;
     IOPort control_;
     u8 select_;
     DriveInfo info_;
+    u32 signature_;
 
   public:
     Disk(const char* name, u16 port, u8 unit)
-      : name_(name)
+      : block::Device(name)
       , select_(0xA0 | (unit << 4))
+      , signature_(0)
     {
       io_.port = port;
       control_.port = port + 0x206;
     }
 
   public:
+    void reset();
+    bool select();
+
     void show_info();
     bool identify();
     void read_pio(u8* buf, int count);
-    bool select();
     void request_lba(u32 block, u8 count);
     void show_status();
+  
+    void read_blocks(u32 block, u8 count, u8* buffer, u32 buffer_size);
+
+    void detect_partitions();
 
     void disable_irq();
     void enable_irq();

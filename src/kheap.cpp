@@ -273,7 +273,7 @@ void* Heap::alloc(u32 size, u8 page_align) {
 
   // Here we work out if we should split the hole we found into two parts.
   // Is the original hole size - requested hole size less than the overhead for adding a new hole?
-  ASSERT(orig_hole_size > new_size);
+  ASSERT(orig_hole_size >= new_size);
   if(orig_hole_size - new_size < sizeof(Heap::header) + sizeof(Heap::footer)) {
     // Then just increase the requested size to the size of the hole we found.
     size += orig_hole_size-new_size;

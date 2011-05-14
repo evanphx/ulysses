@@ -18,6 +18,7 @@ namespace pci {
 
     DeviceList devices;
 
+  public:
     u8 configb(u8 device, u8 var);
     u16 configw(u8 device, u8 var);
     u32 configl(u8 device, u8 var);

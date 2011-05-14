@@ -14,6 +14,7 @@
 #include "pci.hpp"
 #include "rtc.hpp"
 #include "elf.hpp"
+#include "block.hpp"
 
 #include "cpu.hpp"
 
@@ -125,7 +126,11 @@ void kmain2() {
 
   initialise_syscalls();
 
+  block::registry.init();
+
   pci_bus.init();
+
+  // block::registry.print();
 
   if(syscall_fork() == 0) {
     /* console.write("Switching to user mode.\n"); */

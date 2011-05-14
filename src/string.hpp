@@ -1,11 +1,12 @@
-// put stuff in here
+#ifndef STRING_HPP
+#define STRING_HPP
 
 namespace sys {
 
   template <int sz>
     class FixedString {
       const static int capacity_ = sz;
-      char data_[sz];
+      char data_[sz+1];
       int size_;
 
     public:
@@ -24,6 +25,7 @@ namespace sys {
         }
 
         size_ = i;
+        data_[size_] = 0;
       }
 
       FixedString(const char* str) {
@@ -34,10 +36,21 @@ namespace sys {
         if(size > capacity_) size = capacity_;
         size_ = size;
         memcpy(data_, str, size);
+        data_[size_] = 0;
       }
 
       FixedString& operator=(const char* str) {
         set(str);
+        return *this;
+      }
+
+      FixedString& operator<<(char c) {
+        int idx = size_++;
+        ASSERT(size_ <= capacity_);
+
+        data_[idx] = c;
+        data_[size_] = 0;
+        return *this;
       }
 
       const char* c_str() {
@@ -49,3 +62,5 @@ namespace sys {
       }
     };
 };
+
+#endif

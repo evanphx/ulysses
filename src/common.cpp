@@ -153,4 +153,10 @@ void kabort() {
   cpu::halt_loop();
 }
 
+void __cxa_pure_virtual() {
+  cpu::disable_interrupts();
+  console.printf("Pure virtual method called. Full stop.\n");
+  cpu::halt_loop();
+}
+
 }

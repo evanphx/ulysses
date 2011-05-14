@@ -27,7 +27,7 @@
 #define PCI_IRQ_PIN 0x3d
 #define PCI_IRQ_LINE 0x3c
 
-pci::Bus pci_bus = {{0xCFB}, {0xCF8}, {0xCFC}, 0};
+pci::Bus pci_bus;
 
 namespace pci {
 
@@ -189,9 +189,6 @@ namespace pci {
       Device* dev = new(kheap) Device(this, vendor, device, klass, bridge);
       dev->read_settings();
 
-      console.printf("dev: %x ", device);
-      dev->show();
-
       devices.append(dev);
     }
   }
@@ -208,6 +205,11 @@ namespace pci {
   }
 
   void Bus::init() {
+    io1.port = 0xCFB;
+    io2.port = 0xCF8;
+    var_io.port = 0xCFC;
+    bus = 0;
+
     if(!detect()) {
       console.write("No PCI bus detected.\n");
       return;

@@ -4,6 +4,7 @@
 #include "ata.hpp"
 #include "pci.hpp"
 #include "cpu.hpp"
+#include "isr.hpp"
 
 namespace ata {
 
@@ -28,6 +29,8 @@ namespace ata {
 #define ATA_ER_BADADDR  0x01
 
 
+#define ATA_CMD_SOFT_RESET        0x08
+#define ATA_CMD_DEVICE_RESET      0x08
 #define ATA_CMD_READ_PIO          0x20
 #define ATA_CMD_READ_PIO_EXT      0x24
 #define ATA_CMD_READ_DMA          0xC8
@@ -285,6 +288,10 @@ namespace ata {
     return check == select_;
   }
 
+  void Disk::reset() {
+    io_.outb(ATA_CMD_DEVICE_RESET, ATA_REG_COMMAND);
+  }
+
   void Disk::request_lba(u32 block, u8 count) {
     u32 ctl = 0x08;
 
@@ -307,6 +314,59 @@ namespace ata {
     control_.outb(ATA_CTRL_ENABLE_IRQ);
   }
 
+  void Disk::read_blocks(u32 block, u8 count, u8* buffer, u32 buffer_size) {
+    select();
+    request_lba(block, count);
+    read_pio(buffer, buffer_size);
+  }
+
+  struct DosPartionEntry {
+    u8 status;
+    u8 chs0;
+    u8 chs1;
+    u8 chs2;
+    u8 type;
+    u8 chs_end0;
+    u8 chs_end1;
+    u8 chs_end2;
+    u32 lba;
+    u32 sectors;
+  };
+
+  void Disk::detect_partitions() {
+    u8* buf = read(0,1);
+    if(buf[510] == 0x55 && buf[511] == 0xAA) {
+      signature_ = *(u32*)(buf + 440);
+      DosPartionEntry* entry = (DosPartionEntry*)(buf + 446);
+      for(int i = 0; i < 4; i++) {
+        if(entry->type != 0) {
+          sys::FixedString<8> name = name_.c_str();
+          name << ('0' + i);
+
+          console.printf("%s: type=%x %dM @ %x\n",
+                         name.c_str(), entry->type,
+                         entry->sectors / 2048, entry->lba);
+
+          block::SubDevice* dev = new(kheap) block::SubDevice(
+              name.c_str(), this, entry->lba, entry->sectors);
+
+          block::registry.add(dev);
+        }
+        entry++;
+      }
+    }
+    kfree(buf);
+  }
+
+  const static u16 default_ports[] = {0x1f0, 0x170, 0x1e8, 0x168, 0x1e0, 0x160 };
+  const static u16 default_irqs[] =  {14, 15, 11, 10, 8, 12 };
+  const static int defaults = 6;
+  const static int unit_per_port = 2;
+
+  static void ide_handler(registers_t* regs) {
+
+  }
+
   Disk* probe(u32 port_no, int unit, const char* name) {
     IOPort port;
     port.port = port_no;
@@ -325,28 +385,7 @@ namespace ata {
     }
 
     return disk;
-
-    // disk->select();
-
-    /*
-    disk->request_lba(0,1);
-
-    disk->show_status();
-    u8 char_buf[512];
-
-    disk->read_pio(char_buf, 512);
-
-    char_buf[31] = 0;
-
-    console.printf("ide: read %s\n", char_buf);
-    */
   }
-
-
-  const static u16 default_ports[] = {0x1f0, 0x170, 0x1e8, 0x168, 0x1e0, 0x160 };
-  const static u16 default_irqs[] =  {14, 15, 11, 10, 8, 12 };
-  const static int defaults = 6;
-  const static int unit_per_port = 2;
 
   void detect() {
     pci::DeviceList::Iterator i = pci_bus.devices.begin();
@@ -365,7 +404,10 @@ namespace ata {
             const char name[4] = {'a', 'd', 'a' + devices++, 0 };
             Disk* disk = probe(default_ports[i], u, name);
             if(disk) {
+              register_interrupt_handler(default_irqs[i], ide_handler);
+              block::registry.add(disk);
               disk->show_info();
+              disk->detect_partitions();
             }
           }
         }

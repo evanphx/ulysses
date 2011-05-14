@@ -130,11 +130,11 @@ namespace sys {
     int count_;
 
   public:
-    void init() {
-      head_ = 0;
-      tail_ = 0;
-      count_ = 0;
-    }
+    ExternalList()
+      : head_(0)
+      , tail_(0)
+      , count_(0)
+    {}
 
     T& head() {
       return head_->elem;
