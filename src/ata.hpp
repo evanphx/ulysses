@@ -139,7 +139,7 @@ namespace ata {
     void request_lba(u32 block, u8 count);
     void show_status();
   
-    void read_blocks(u32 block, u8 count, u8* buffer, u32 buffer_size);
+    void read_block(u32 block, u8* buffer);
 
     void detect_partitions();
 

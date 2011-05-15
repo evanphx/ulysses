@@ -314,10 +314,14 @@ namespace ata {
     control_.outb(ATA_CTRL_ENABLE_IRQ);
   }
 
-  void Disk::read_blocks(u32 block, u8 count, u8* buffer, u32 buffer_size) {
+  // Obviously only works in BlockSize is >= 512, but that should always
+  // be true.
+  const static int Block2Sector = block::BlockSize / 512;
+
+  void Disk::read_block(u32 block, u8* buffer) {
     select();
-    request_lba(block, count);
-    read_pio(buffer, buffer_size);
+    request_lba(block * Block2Sector, 1 * Block2Sector);
+    read_pio(buffer, block::BlockSize);
   }
 
   struct DosPartionEntry {
@@ -395,6 +399,7 @@ namespace ata {
         u32 timing = dev->configl(0x40);
         if((timing & 0x80008000) == 0) {
           console.printf("ata: no ports enabled.\n");
+          return;
         }
 
         int devices = 0;

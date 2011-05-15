@@ -9,6 +9,7 @@
 #include "common.hpp"
 #include "paging.hpp"
 #include "list.hpp"
+#include "fs.hpp"
 
 #define KERNEL_STACK_SIZE 2048       // Use a 2kb kernel stack.
 
@@ -54,8 +55,19 @@ struct Task {
   sys::ListNode<Task> lists[cTotal];
   MMapList mmaps;
 
+  fs::File* fds_[16];
+
+public:
   Task* next_runnable() {
     return lists[cRun].next;
+  }
+
+  int find_fd() {
+    for(int i = 0; i < 16; i++) {
+      if(fds_[i] == 0) return i;
+    }
+
+    return -1;
   }
 
   void sleep_til(int secs);
@@ -63,6 +75,9 @@ struct Task {
 
   void add_mmap(fs::Node* node, u32 offset, u32 size, u32 addr, u32 mem_size, int flags);
   MemoryMapping* find_mapping(u32 addr);
+
+  int open_file(const char* name, int mode);
+  fs::File* get_file(int fd);
 };
 
 struct Scheduler {

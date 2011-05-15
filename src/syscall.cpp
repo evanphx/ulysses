@@ -19,7 +19,12 @@ void sys_kprint(const char* p) {
 void sys_exec(registers_t* regs) {
   const char* path = (const char*)regs->ebx;
 
-  fs::Node* test = fs_root->finddir(path);
+  fs::Node* test = fs_root->finddir(path, strlen(path));
+
+  if(!test) {
+    console.printf("Exec of %s failed, not found.\n", path);
+    return;
+  }
 
   u32 loc = elf::load_node(test);
 
@@ -51,6 +56,27 @@ void sys_wait_any(int* status) {
   scheduler.wait_any(status);
 }
 
+int sys_open(char* name, int mode) {
+  return scheduler.current->open_file(name, mode);
+}
+
+int sys_read(int fd, char* buffer, int size) {
+  if(fs::File* file = scheduler.current->get_file(fd)) {
+    console.printf("reading %d bytes from %d\n", size, fd);
+    if(size == 0) return 0;
+    if(size < 0) return -1;
+
+    return (int)file->read((u8*)buffer, (u32)size);
+  } else {
+    console.printf("unable to find fd %d\n", fd);
+    return -1;
+  }
+}
+
+int sys_mount(const char* path, const char* fstype) {
+  return fs::mount(path, fstype);
+}
+
 const static u32 raw_syscall_base = 1024;
 
 DEFN_SYSCALL1(kprint, 0, const char*);
@@ -60,6 +86,9 @@ DEFN_SYSCALL0(pause, 3);
 DEFN_SYSCALL1(exit, 4, int);
 DEFN_SYSCALL1(sleep, 5, int);
 DEFN_SYSCALL1(wait_any, 6, int*);
+DEFN_SYSCALL2(open, 7, char*, int);
+DEFN_SYSCALL3(read, 8, int, char*, int);
+DEFN_SYSCALL2(mount, 9, char*, char*);
 
 DEFN_SYSCALL1(exec, raw_syscall_base + 0, const char*);
 
@@ -70,14 +99,17 @@ static void* syscalls[] = {
     (void*)&sys_pause,
     (void*)&sys_exit,
     (void*)&sys_sleep,
-    (void*)&sys_wait_any
+    (void*)&sys_wait_any,
+    (void*)&sys_open,
+    (void*)&sys_read,
+    (void*)&sys_mount
 };
 
 static void* raw_syscalls[] = {
     (void*)&sys_exec
 };
 
-const static u32 num_syscalls = 7;
+const static u32 num_syscalls = 10;
 const static u32 num_raw_syscalls = 1;
 
 void initialise_syscalls() {

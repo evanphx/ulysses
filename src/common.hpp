@@ -46,8 +46,9 @@ void memset(u8int *dest, u8int val, u32int len);
 void memcpy(u8int *dest, const u8int *src, u32int len);
 
 char *strcpy(char *dest, const char *src);
-int strlen(char *src);
+int strlen(const char *src);
 int strcmp(const char *str1, const char *str2);
+int strncmp(const char *str1, const char *str2, int len);
 
 void kabort();
 

@@ -37,13 +37,13 @@ namespace initrd {
     return &dirent;
   }
 
-  fs::Node* Node::finddir(const char *name) {
-    if(this == fs->root && !strcmp(name, "dev")) {
+  fs::Node* Node::finddir(const char *name, int len) {
+    if(this == fs->root && len == 3 && !strncmp(name, "dev", len)) {
       return fs->dev;
     }
 
     for(u32 i = 0; i < fs->nroot_nodes; i++) {
-      if(!strcmp(name, fs->root_nodes[i].name)) {
+      if(!strncmp(name, fs->root_nodes[i].name, len)) {
         return &fs->root_nodes[i];
       }
     }
@@ -63,8 +63,7 @@ namespace initrd {
     root->mask = root->uid = root->gid = 
       root->inode = root->length = 0;
     root->flags = FS_DIRECTORY;
-    root->ptr = 0;
-    root->impl = 0;
+    root->delegate = 0;
     root->fs = this;
 
     // Initialise the /dev directory (required!)
@@ -73,8 +72,7 @@ namespace initrd {
     dev->mask = dev->uid = dev->gid =
       dev->inode = dev->length = 0;
     dev->flags = FS_DIRECTORY;
-    dev->ptr = 0;
-    dev->impl = 0;
+    dev->delegate = 0;
     dev->fs = this;
 
     nroot_nodes = initrd_header->nfiles;
@@ -97,7 +95,6 @@ namespace initrd {
       node->length = file_headers[i].length;
       node->inode = i;
       node->flags = FS_FILE;
-      node->impl = 0;
     }
     return root;
   }

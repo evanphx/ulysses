@@ -10,6 +10,8 @@
 #include "cpu.hpp"
 #include "console.hpp"
 #include "timer.hpp"
+#include "fs.hpp"
+#include "fs/devfs.hpp"
 
 Scheduler scheduler;
 
@@ -17,7 +19,11 @@ Task::Task(int pid)
   : id(pid)
   , alarm_at(0)
   , exit_code(0)
-{}
+{
+  for(int i = 0; i < 16; i++) {
+    fds_[i] = 0;
+  }
+}
 
 void Task::sleep_til(int secs) {
   alarm_at = timer.ticks + timer.secs_to_ticks(secs);
@@ -35,6 +41,25 @@ void Task::add_mmap(fs::Node* node, u32 offset, u32 size, u32 addr, u32 mem_size
 {
   MemoryMapping mapping(addr, mem_size, node, offset, size, flags);
   mmaps.append(mapping);
+}
+
+int Task::open_file(const char* path, int mode) {
+  fs::Node* node = fs::lookup(path+1, strlen(path)-1, fs_root);
+
+  if(!node) return -1;
+
+  // block::Device* dev = block::registry.get(1);
+  // fs::Node* node = devfs::main.make_node(dev, path);
+  int fd = find_fd();
+
+  fds_[fd] = new(kheap) fs::File(node);
+
+  return fd;
+}
+
+fs::File* Task::get_file(int fd) {
+  if(fd >= 16) return 0;
+  return fds_[fd];
 }
 
 MemoryMapping* Task::find_mapping(u32 addr) {

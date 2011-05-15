@@ -27,7 +27,7 @@ namespace initrd {
 
     u32 read(u32 offset, u32 size, u8* buffer);
     struct dirent* readdir(u32 index);
-    fs::Node* finddir(const char* name);
+    fs::Node* finddir(const char* name, int size);
   };
 
   struct FS {

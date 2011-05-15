@@ -21,7 +21,7 @@ struct dirent {
 
 namespace fs {
 
-struct Node {
+  struct Node {
     char name[128];     // The filename.
     u32 mask;        // The permissions mask.
     u32 uid;         // The owning user.
@@ -29,18 +29,29 @@ struct Node {
     u32 flags;       // Includes the node type. See #defines above.
     u32 inode;       // This is device-specific - provides a way for a filesystem to identify files.
     u32 length;      // Size of the file, in bytes.
-    u32 impl;        // An implementation-defined number.
 
-    Node *ptr; // Used by mountpoints and symlinks.
+    Node* delegate; // Used by mountpoints and symlinks.
 
     virtual u32 read(u32 offset, u32 size, u8* buffer) { return 0; }
     virtual u32 write(u32 offset, u32 size, u8* buffer) { return 0; }
     virtual void open() { return; }
     virtual void close() { return; }
     virtual struct dirent* readdir(u32 index) { return 0; }
-    virtual Node* finddir(const char* name) { return 0; }
-};
+    virtual Node* finddir(const char* name, int len) { return 0; }
+  };
 
+  // An open file used by a process.
+  class File {
+    Node* node_;
+    u32 offset_;
+
+  public:
+    File(Node* node);
+    s32 read(u8* buffer, u32 size);
+  };
+
+  fs::Node* lookup(const char* name, int len, fs::Node* dir);
+  int mount(const char* path, const char* type);
 }
 
 extern fs::Node *fs_root; // The root of the filesystem.

@@ -94,6 +94,15 @@ namespace pci {
       return 0;
     }
 
+    u32 mem_port(int which) {
+      if(resources_[which].type == eMemory) {
+        return resources_[which].base;
+      }
+
+      return 0;
+    }
+
+
     u32 configl(u32 cmd) {
       return bus_->configl(device_, cmd);
     }
