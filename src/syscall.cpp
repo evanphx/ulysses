@@ -73,8 +73,8 @@ int sys_read(int fd, char* buffer, int size) {
   }
 }
 
-int sys_mount(const char* path, const char* fstype) {
-  return fs::mount(path, fstype);
+int sys_mount(const char* path, const char* fstype, const char* dev) {
+  return fs::mount(path, fstype, dev);
 }
 
 const static u32 raw_syscall_base = 1024;
@@ -88,7 +88,7 @@ DEFN_SYSCALL1(sleep, 5, int);
 DEFN_SYSCALL1(wait_any, 6, int*);
 DEFN_SYSCALL2(open, 7, char*, int);
 DEFN_SYSCALL3(read, 8, int, char*, int);
-DEFN_SYSCALL2(mount, 9, char*, char*);
+DEFN_SYSCALL3(mount, 9, char*, char*, char*);
 
 DEFN_SYSCALL1(exec, raw_syscall_base + 0, const char*);
 

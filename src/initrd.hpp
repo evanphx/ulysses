@@ -32,10 +32,11 @@ namespace initrd {
 
   struct FS {
     FileHeader* file_headers; // The list of file headers.
-    Node* root;             // Our root directory node.
-    Node* dev;              // We also add a directory node for /dev, so we can mount devfs later on.
-    Node* root_nodes;              // List of file nodes.
-    u32 nroot_nodes;                    // Number of file nodes.
+    Node* root;
+    Node* dev;
+    Node* data;
+    Node* root_nodes; // List of file nodes.
+    u32 nroot_nodes; // Number of file nodes.
   
     Node* init(u32 location);
   };

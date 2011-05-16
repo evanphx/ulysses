@@ -5,6 +5,8 @@
 #define FS_H
 
 #include "common.hpp"
+#include "string.hpp"
+#include "block.hpp"
 
 #define FS_FILE        0x01
 #define FS_DIRECTORY   0x02
@@ -50,8 +52,45 @@ namespace fs {
     s32 read(u8* buffer, u32 size);
   };
 
+  class Registry;
+
+  class RegisteredFS {
+    RegisteredFS* next_;
+    sys::FixedString<16> name_;
+
+  public:
+
+    RegisteredFS(const char* name)
+      : next_(0)
+      , name_(name)
+    {}
+
+    sys::FixedString<16>& name() {
+      return name_;
+    }
+
+    virtual fs::Node* load(block::Device* dev) = 0;
+
+    friend class Registry;
+  };
+
+  class Registry {
+    RegisteredFS* head_;
+
+  public:
+
+    void init() {
+      head_ = 0;
+    }
+
+    void add_fs(RegisteredFS* fs);
+    RegisteredFS* find(const char* name);
+  };
+
+  extern Registry registry;
+
   fs::Node* lookup(const char* name, int len, fs::Node* dir);
-  int mount(const char* path, const char* type);
+  int mount(const char* path, const char* type, const char* dev_name);
 }
 
 extern fs::Node *fs_root; // The root of the filesystem.

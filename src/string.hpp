@@ -44,6 +44,10 @@ namespace sys {
         return *this;
       }
 
+      bool operator==(const char* str) {
+        return !strcmp(data_, str);
+      }
+
       FixedString& operator<<(char c) {
         int idx = size_++;
         ASSERT(size_ <= capacity_);

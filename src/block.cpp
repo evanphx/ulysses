@@ -72,7 +72,7 @@ namespace block {
       left -= copy_bytes;
     } else {
       // Satisfied all out of the first block! Woo!
-      memcpy(out_buffer, buffer + offset, left);
+      memcpy(out_buffer, buffer + initial_offset, left);
       return size;
     }
 

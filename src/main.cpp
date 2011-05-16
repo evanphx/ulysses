@@ -16,6 +16,7 @@
 #include "elf.hpp"
 #include "block.hpp"
 #include "fs/devfs.hpp"
+#include "fs/ext2.hpp"
 
 #include "cpu.hpp"
 
@@ -127,7 +128,10 @@ void kmain2() {
 
   initialise_syscalls();
 
+  fs::registry.init();
   devfs::main.init();
+  ext2::init();
+
   block::registry.init();
 
   pci_bus.init();

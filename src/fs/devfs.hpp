@@ -19,9 +19,20 @@ namespace devfs {
     virtual Node* finddir(const char* name, int len);
   };
 
+  class RegisteredFS : public fs::RegisteredFS {
+  public:
+    RegisteredFS(const char* name)
+      : fs::RegisteredFS(name)
+    {}
+
+    fs::Node* load(block::Device* dev);
+  };
+
   class DevFS {
     Node* head_;
     Node* root_;
+
+    RegisteredFS* fs_;
 
   public:
 
@@ -37,6 +48,7 @@ namespace devfs {
     Node* make_node(block::Device* dev, const char* name);
     void add_block_device(block::Device* dev, const char* name);
   };
+
 
   extern DevFS main;
 };

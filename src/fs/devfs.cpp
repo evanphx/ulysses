@@ -4,8 +4,15 @@
 namespace devfs {
   DevFS main;
 
+  fs::Node* RegisteredFS::load(block::Device* dev) {
+    return main.root();
+  }
+
   void DevFS::init() {
     head_ = 0;
+    fs_ = new(kheap) RegisteredFS("devfs");
+
+    fs::registry.add_fs(fs_);
 
     root_ = new(kheap) Node;
     root_->name[0] = '/';

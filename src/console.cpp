@@ -323,7 +323,11 @@ retry:
       case 's':
       case 'S':
         s = va_arg(ap, char*);
-        write(s);
+        if(!s) {
+          write("<null>");
+        } else {
+          write(s);
+        }
         break;
       case 'd':
       case 'i':

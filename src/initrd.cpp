@@ -42,6 +42,10 @@ namespace initrd {
       return fs->dev;
     }
 
+    if(this == fs->root && len == 4 && !strncmp(name, "data", len)) {
+      return fs->data;
+    }
+
     for(u32 i = 0; i < fs->nroot_nodes; i++) {
       if(!strncmp(name, fs->root_nodes[i].name, len)) {
         return &fs->root_nodes[i];
@@ -74,6 +78,14 @@ namespace initrd {
     dev->flags = FS_DIRECTORY;
     dev->delegate = 0;
     dev->fs = this;
+
+    data = knew<initrd::Node>();
+    strcpy(data->name, "data");
+    data->mask = data->uid = data->gid =
+      data->inode = data->length = 0;
+    data->flags = FS_DIRECTORY;
+    data->delegate = 0;
+    data->fs = this;
 
     nroot_nodes = initrd_header->nfiles;
     root_nodes = knew_array<initrd::Node>(nroot_nodes);

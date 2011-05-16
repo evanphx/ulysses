@@ -6,11 +6,13 @@
 COBJECTS=main.o console.o common.o descriptor_tables.o isr.o timer.o \
         kheap.o paging.o ordered_array.o fs.o initrd.o task.o syscall.o \
 				keyboard.o pci.o rtl8139.o eth.o arp.o rtc.o pit.o elf.o \
-				block.o ata.o fs/devfs.o
+				block.o ata.o fs/devfs.o fs/ext2.o
 
 # ORDER MATTERS! boot.o must be first so that it's first
 # when passed to ld so that it's located at the start address!
 SOBJECTS=boot.o interrupt.o gdt.o process.o
+
+CSOURCES=$(COBJECTS:.o=.cpp)
 
 SOURCES=$(COBJECTS:.o=.cpp)
 SOURCES+=$(SOBJECTS:.o=.s)
@@ -32,7 +34,8 @@ LD=../buildtools/local/bin/i386-pc-ulysses-ld
 all: src/kernel
 
 dep:
-	$(CC) $(CXXFLAGS) -MM $(SOURCES) > depend
+	: > depend
+	for i in $(CSOURCES); do $(CC) $(CXXFLAGS) -MM -MT $${i%.cpp}.o $$i >> depend; done
 
 clean:
 	-rm *.o kernel
