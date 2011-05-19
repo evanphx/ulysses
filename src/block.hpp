@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "string.hpp"
 #include "hash_table.hpp"
+#include "block_region.hpp"
 
 namespace block {
   // Must never be less than 512!
@@ -53,16 +54,20 @@ namespace block {
 
   typedef sys::HashTable<u32, u8*, BlockCacheOperations> BlockCache;
 
+  class Buffer;
+
   class Device {
   protected:
     sys::FixedString<8> name_;
     int id_;
 
     BlockCache cache_;
+    u32 signature_;
 
   public:
     Device(const char* name)
       : name_(name)
+      , signature_(0)
     {}
 
     int id() {
@@ -75,9 +80,14 @@ namespace block {
 
     u8* find_block(u32 block);
 
+    Buffer* request(RegionRange& range);
+    virtual void fulfill(Buffer* buffer) = 0;
+
     virtual void read_block(u32 block, u8* buffer) = 0;
     u8* read(u32 block, u8 count);
     u32 read_bytes(u32 byte_offset, u32 byte_size, u8* buffer);
+
+    void detect_partitions();
 
     friend class Registry;
   };
@@ -96,6 +106,7 @@ namespace block {
       , parent_(parent)
     {}
 
+    void fulfill(Buffer* buffer);
     void read_block(u32 block, u8* buffer);
   };
 

@@ -27,19 +27,28 @@
 #define IRQ14 46
 #define IRQ15 47
 
-typedef struct registers
-{
-    u32 ds;                  // Data segment selector
-    u32 edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha.
-    u32 int_no, err_code;    // Interrupt number and error code (if applicable)
-    u32 eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
-} registers_t;
+struct Registers {
+  u32 ds;                  // Data segment selector
+  u32 edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha.
+  u32 int_no, err_code;    // Interrupt number and error code (if applicable)
+  u32 eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
+};
 
-// Enables registration of callbacks for interrupts or IRQs.
-// For IRQs, to ease confusion, use the #defines above as the
-// first parameter.
-typedef void (*isr_t)(registers_t*);
-void register_isr_handler(u8int n, isr_t handler);
-void register_interrupt_handler(u8int n, isr_t handler);
+namespace interrupt {
+
+  // Enables registration of callbacks for interrupts or IRQs.
+  // For IRQs, to ease confusion, use the #defines above as the
+  // first parameter.
+
+  class Handler {
+  public:
+    virtual void handle(Registers* regs);
+  };
+
+  void init();
+
+  void register_isr(u8 nun, Handler* handler);
+  void register_interrupt(u8 num, Handler* handler);
+}
 
 #endif

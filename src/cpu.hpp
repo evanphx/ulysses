@@ -3,11 +3,11 @@
 
 namespace cpu {
 
+  extern "C" u32 read_flags();
+
   static const unsigned int cPageSize = 0x1000;
   static const unsigned int cPageMask = ~0xfff;
   static const unsigned int cMaxAddress = 0xFFFFFFFF;
-
-  static int interrupts_on = 0;
 
   static inline int enable_interrupts() {
     asm volatile("sti");
@@ -15,14 +15,23 @@ namespace cpu {
   }
 
   static inline int disable_interrupts() {
-    if(!interrupts_on) return 0;
     asm volatile("cli");
-    return 1;
+    return 0;
+  }
+
+  enum Flags {
+    eIF = 1 << 9
+  };
+
+  static inline bool interrupts_enabled_p() {
+    u32 flags = read_flags();
+    return (flags & eIF) == eIF;
   }
 
   static inline void restore_interrupts(int val) {
     if(val) {
-      interrupts_on = 1;
+      disable_interrupts();
+    } else {
       enable_interrupts();
     }
   }

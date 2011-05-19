@@ -77,7 +77,6 @@ int kmain(struct multiboot *mboot_ptr, u32 initial_stack) {
   }
 
   // Initialise the PIT to 100Hz
-  cpu::interrupts_on = 1;
   cpu::enable_interrupts();
 
   timer.init(SLICE_HZ);
@@ -149,6 +148,7 @@ void kmain2() {
     for(;;) {
       scheduler.cleanup();
       scheduler.switch_task();
+      cpu::enable_interrupts();
       cpu::halt();
     }
   }

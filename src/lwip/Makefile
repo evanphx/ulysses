@@ -1,6 +1,6 @@
-CC=i386-elf-gcc
-LD=i386-elf-ld
-AR=i386-elf-ar
+CC=../../buildtools/local/bin/i386-pc-ulysses-gcc
+LD=../../buildtools/local/bin/i386-pc-ulysses-ld
+AR=../../buildtools/local/bin/i386-pc-ulysses-ar
 
 CCDEP=$(CC)
 

@@ -6,6 +6,8 @@
 #include "cpu.hpp"
 #include "isr.hpp"
 
+#include "block_buffer.hpp"
+
 namespace ata {
 
 #define ATA_SR_BUSY    0x80
@@ -44,6 +46,8 @@ namespace ata {
 #define ATA_CMD_PACKET            0xA0
 #define ATA_CMD_IDENTIFY_PACKET   0xA1
 #define ATA_CMD_IDENTIFY          0xEC
+
+#define ATA_CMD_SETMULTI          0xC6
 
 
 #define ATA_CTRL_DISABLE_IRQ      0x2
@@ -133,10 +137,10 @@ namespace ata {
   }
 
   void Disk::show_status() {
-    u8 status = io_.inb(ATA_REG_STATUS);
-    console.printf("ata: status: ");
+    u8 s = status();
+    console.printf("ata: status: (%d) ", (int)s);
 
-    if(status & ATA_SR_ERROR) {
+    if(s & ATA_SR_ERROR) {
       console.printf("error (");
       u8 which = io_.inb(ATA_REG_ERROR);
 
@@ -175,55 +179,62 @@ namespace ata {
       console.printf(") ");
     }
 
-    if(status & ATA_SR_INDEX) {
+    if(s & ATA_SR_INDEX) {
       console.printf("index ");
     }
 
-    if(status & ATA_SR_CORR) {
+    if(s & ATA_SR_CORR) {
       console.printf("ecc ");
     }
 
-    if(status & ATA_SR_DRQ) {
+    if(s & ATA_SR_DRQ) {
       console.printf("drq ");
     }
 
-    if(status & ATA_SR_SEEK) {
+    if(s & ATA_SR_SEEK) {
       console.printf("seek ");
     }
 
-    if(status & ATA_SR_WERR) {
+    if(s & ATA_SR_WERR) {
       console.printf("werr ");
     }
 
-    if(status & ATA_SR_READY) {
+    if(s & ATA_SR_READY) {
       console.printf("ready ");
     }
 
-    if(status & ATA_SR_BUSY) {
+    if(s & ATA_SR_BUSY) {
       console.printf("busy ");
     }
 
     console.printf("\n");
   }
 
+  // Read the status of the disk, but use the alt status port
+  // (ie, read from the control ioport) so that we don't clear
+  // the irq status.
+  u8 Disk::status() {
+    return control_.inb();
+  }
+
   bool Disk::ready_p() {
-    u8 status = io_.inb(ATA_REG_STATUS);
-    return (status & ATA_SR_READY) == ATA_SR_READY;
+    return (status() & ATA_SR_READY) == ATA_SR_READY;
   }
 
   bool Disk::error_p() {
-    u8 status = io_.inb(ATA_REG_STATUS);
-    return (status & ATA_SR_ERROR) == ATA_SR_ERROR;
+    return (status() & ATA_SR_ERROR) == ATA_SR_ERROR;
   }
 
   bool Disk::busy_p() {
-    u8 status = io_.inb(ATA_REG_STATUS);
-    return (status & ATA_SR_BUSY) == ATA_SR_BUSY;
+    return (status() & ATA_SR_BUSY) == ATA_SR_BUSY;
   }
 
   bool Disk::drq_p() {
-    u8 status = io_.inb(ATA_REG_STATUS);
-    return (status & ATA_SR_DRQ) == ATA_SR_DRQ;
+    return (status() & ATA_SR_DRQ) == ATA_SR_DRQ;
+  }
+
+  bool Disk::success_p() {
+    return (status() & (ATA_SR_READY | ATA_SR_BUSY | ATA_SR_ERR)) == ATA_SR_READY;
   }
 
   void Disk::read_pio(u8* c_buf, int count) {
@@ -292,7 +303,19 @@ namespace ata {
     io_.outb(ATA_CMD_DEVICE_RESET, ATA_REG_COMMAND);
   }
 
+  void Disk::clear_irq() {
+    // When you read the normal status register, the device
+    // clears it's irq status so it will fire another irq.
+    io_.inb(ATA_REG_STATUS);
+  }
+
   void Disk::request_lba(u32 block, u8 count) {
+    ASSERT(count > 0);
+
+    // We have to read the status (drq_p) does that to reset
+    // the irq levels it seems.
+    ASSERT(!drq_p());
+
     u32 ctl = 0x08;
 
     control_.outb(ctl);
@@ -304,6 +327,8 @@ namespace ata {
 
     // send the read command
     io_.outb(ATA_CMD_READ_PIO, ATA_REG_COMMAND);
+
+    ASSERT(success_p());
   }
 
   void Disk::disable_irq() {
@@ -318,58 +343,78 @@ namespace ata {
   // be true.
   const static int Block2Sector = block::BlockSize / 512;
 
-  void Disk::read_block(u32 block, u8* buffer) {
+  void Disk::fulfill(block::Buffer* buffer) {
+    block::RegionRange& range = buffer->range();
+
+    u32 sector = range.sector();
+    u32 num_sectors = range.num_sectors();
+
+    interrupt_.add_request(buffer);
+
     select();
-    request_lba(block * Block2Sector, 1 * Block2Sector);
-    read_pio(buffer, block::BlockSize);
+    enable_irq();
+    request_lba(sector, num_sectors);
   }
 
-  struct DosPartionEntry {
-    u8 status;
-    u8 chs0;
-    u8 chs1;
-    u8 chs2;
-    u8 type;
-    u8 chs_end0;
-    u8 chs_end1;
-    u8 chs_end2;
-    u32 lba;
-    u32 sectors;
-  };
+  void Disk::wait_til_ready() {
+    while(!ready_p()) cpu::halt();
+  }
 
-  void Disk::detect_partitions() {
-    u8* buf = read(0,1);
-    if(buf[510] == 0x55 && buf[511] == 0xAA) {
-      signature_ = *(u32*)(buf + 440);
-      DosPartionEntry* entry = (DosPartionEntry*)(buf + 446);
-      for(int i = 0; i < 4; i++) {
-        if(entry->type != 0) {
-          sys::FixedString<8> name = name_.c_str();
-          name << ('0' + i);
+  void Disk::read_block(u32 block, u8* buffer) {
+    disable_irq();
+    select();
+    request_lba(block * Block2Sector, 1 * Block2Sector);
+    wait_til_ready();
+    read_pio(buffer, block::BlockSize);
+    enable_irq();
+  }
 
-          console.printf("%s: type=%x %dM @ %x\n",
-                         name.c_str(), entry->type,
-                         entry->sectors / 2048, entry->lba);
+  void ATAInterrupt::handle(Registers* regs) {
+    disk_->clear_irq();
 
-          block::SubDevice* dev = new(kheap) block::SubDevice(
-              name.c_str(), this, entry->lba, entry->sectors);
-
-          block::registry.add(dev);
-        }
-        entry++;
-      }
+    block::Buffer* buffer = request_buffer_;
+    if(!buffer) {
+      console.printf("in noop ata interrupt\n");
+      return;
     }
-    kfree(buf);
+
+    ASSERT(disk_->success_p());
+
+    block::RegionRange& range = buffer->range();
+    u32 num_bytes = range.num_bytes();
+
+    if(read_bytes_ >= num_bytes) {
+      console.printf("weird, should be done with this request.\n");
+      return;
+    }
+
+    ASSERT(buffer->byte_size() >= num_bytes);
+
+    // console.printf("reading %d, offset=%d\n" bytes_per_read_, read_bytes_);
+
+    disk_->read_pio(buffer->data() + read_bytes_, bytes_per_read_);
+
+    read_bytes_ += bytes_per_read_;
+
+    if(read_bytes_ >= num_bytes) {
+      ASSERT(!disk_->drq_p());
+
+      buffer->set_full();
+
+      request_buffer_ = 0;
+    }
+  }
+
+  void ATAInterrupt::add_request(block::Buffer* buffer) {
+    request_buffer_ = buffer;
+    read_bytes_ = 0;
+    bytes_per_read_ = 512;
   }
 
   const static u16 default_ports[] = {0x1f0, 0x170, 0x1e8, 0x168, 0x1e0, 0x160 };
   const static u16 default_irqs[] =  {14, 15, 11, 10, 8, 12 };
   const static int defaults = 6;
   const static int unit_per_port = 2;
-
-  static void ide_handler(registers_t* regs) {
-
-  }
 
   Disk* probe(u32 port_no, int unit, const char* name) {
     IOPort port;
@@ -409,7 +454,8 @@ namespace ata {
             const char name[4] = {'a', 'd', 'a' + devices++, 0 };
             Disk* disk = probe(default_ports[i], u, name);
             if(disk) {
-              register_interrupt_handler(default_irqs[i], ide_handler);
+              interrupt::register_interrupt(default_irqs[i],
+                                            disk->interrupt_handler());
               block::registry.add(disk);
               disk->show_info();
               disk->detect_partitions();

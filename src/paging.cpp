@@ -75,48 +75,51 @@ bool MemoryMapping::fulfill(Task* task, u32 request) {
   return true;
 }
 
-static void page_fault(registers_t *regs) {
-  // A page fault has occurred.
-  // The faulting address is stored in the CR2 register.
-  u32 faulting_address = cpu::fault_address();
+class PageFault : public interrupt::Handler {
+public:
+  void handle(Registers* regs) {
+    // A page fault has occurred.
+    // The faulting address is stored in the CR2 register.
+    u32 faulting_address = cpu::fault_address();
 
-  MemoryMapping* mmap = scheduler.current->find_mapping(faulting_address);
+    MemoryMapping* mmap = scheduler.current->find_mapping(faulting_address);
 
-  // The error code gives us details of what happened.
-  bool present = !(regs->err_code & 0x1); // Page not present
-  bool rw = regs->err_code & 0x2;           // Write operation?
-  bool us = regs->err_code & 0x4;           // Processor was in user-mode?
-  bool reserved = regs->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
+    // The error code gives us details of what happened.
+    bool present = !(regs->err_code & 0x1); // Page not present
+    bool rw = regs->err_code & 0x2;           // Write operation?
+    bool us = regs->err_code & 0x4;           // Processor was in user-mode?
+    bool reserved = regs->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
 
-  // Ok, this is for a mapping in the current process.
-  if(mmap) {
-    if(!rw || mmap->writable_p()) {
-      if(mmap->fulfill(scheduler.current, faulting_address)) return;
+    // Ok, this is for a mapping in the current process.
+    if(mmap) {
+      if(!rw || mmap->writable_p()) {
+        if(mmap->fulfill(scheduler.current, faulting_address)) return;
+      }
     }
+
+    // int id = regs->err_code & 0x10;          // Caused by an instruction fetch?
+
+    // Output an error message.
+    console.write("Page fault! ( ");
+    if(present) console.write("present ");
+    if(rw) console.write("read-only ");
+    if(us) console.write("user-mode ");
+    if(reserved) console.write("reserved ");
+    console.printf(") at 0x%x\n", faulting_address);
+
+    console.printf("ds: %x\n", regs->ds);
+    console.printf("edi: %x, esi: %x, ebp: %x, esp: %x\n",
+        regs->edi, regs->esi, regs->ebp, regs->esp);
+    console.printf("ebx: %x, edx: %x, ecx: %x, eax: %x\n",
+        regs->ebx, regs->edx, regs->ecx, regs->eax);
+    console.printf("int: %d, err: %d\n", regs->int_no, regs->err_code);
+    console.printf("eip: %x, cs: %x, eflags: %x, useresp: %x, ss: %x\n",
+        regs->eip, regs->cs, regs->eflags,
+        regs->useresp, regs->ss);
+
+    PANIC("Page fault");
   }
-
-  // int id = regs->err_code & 0x10;          // Caused by an instruction fetch?
-
-  // Output an error message.
-  console.write("Page fault! ( ");
-  if(present) console.write("present ");
-  if(rw) console.write("read-only ");
-  if(us) console.write("user-mode ");
-  if(reserved) console.write("reserved ");
-  console.printf(") at 0x%x\n", faulting_address);
-
-  console.printf("ds: %x\n", regs->ds);
-  console.printf("edi: %x, esi: %x, ebp: %x, esp: %x\n",
-                 regs->edi, regs->esi, regs->ebp, regs->esp);
-  console.printf("ebx: %x, edx: %x, ecx: %x, eax: %x\n",
-                 regs->ebx, regs->edx, regs->ecx, regs->eax);
-  console.printf("int: %d, err: %d\n", regs->int_no, regs->err_code);
-  console.printf("eip: %x, cs: %x, eflags: %x, useresp: %x, ss: %x\n",
-                 regs->eip, regs->cs, regs->eflags,
-                 regs->useresp, regs->ss);
-
-  PANIC("Page fault");
-}
+};
 
 void VirtualMemory::init(u32 total_memory) {
   kernel_directory = 0;
@@ -164,8 +167,10 @@ void VirtualMemory::init(u32 total_memory) {
     alloc_user_frame(get_page(i, 1, kernel_directory));
   }
 
+  static PageFault page_fault;
+
   // Before we enable paging, we must register our page fault handler.
-  register_isr_handler(14, page_fault);
+  interrupt::register_isr(14, &page_fault);
 
   // Now, enable paging!
   switch_page_directory(kernel_directory);

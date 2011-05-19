@@ -1,3 +1,9 @@
+[GLOBAL read_flags]
+read_flags:
+    pushfd
+    pop eax
+    ret
+
 [GLOBAL read_eip]
 read_eip:
     pop eax                     ; Get the return address

@@ -58,7 +58,7 @@ int Task::open_file(const char* path, int mode) {
 }
 
 fs::File* Task::get_file(int fd) {
-  if(fd >= 16) return 0;
+  if(fd < 0 || fd >= 16) return 0;
   return fds_[fd];
 }
 
@@ -92,6 +92,10 @@ void Scheduler::init() {
   current = new(kheap) Task(next_pid++);
   current->directory = vmem.current_directory;
   current->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
+
+  task0 = current;
+
+  ASSERT(task0->id == 0);
 
   make_ready(current);
 
@@ -148,7 +152,16 @@ void Scheduler::switch_task() {
   Task* next = current->next_runnable();
 
   // If we fell off the end of the linked list start again at the beginning.
-  if(!next) next = ready_queue.head();
+  if(!next) {
+    if(ready_queue.count() == 0) {
+      console.printf("NO TASKS TO RUN\n");
+      kabort();
+    }
+
+    next = ready_queue.head();
+  }
+
+  ASSERT(next);
 
   if(next == current) return;
 
@@ -171,6 +184,8 @@ void Scheduler::switch_task() {
 void Scheduler::exit(int code) {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
+
+  ASSERT(current != task0);
 
   ready_queue.unlink(current);
 
@@ -198,12 +213,33 @@ void Scheduler::sleep(int secs) {
 
   current->sleep_til(secs);
 
+  ASSERT(current != task0);
+
   ready_queue.unlink(current);
   make_wait(current);
 
   cpu::restore_interrupts(st);
 
   switch_task();
+}
+
+void Scheduler::io_wait() {
+  // We are modifying kernel structures, and so cannot be interrupted.
+  cpu::disable_interrupts();
+
+  current->state = Task::eIOWait;
+
+  ASSERT(current != task0);
+
+  ready_queue.unlink(current);
+
+  cpu::enable_interrupts();
+
+  ASSERT(cpu::interrupts_enabled_p());
+
+  switch_task();
+
+  cpu::disable_interrupts();
 }
 
 int Scheduler::fork() {

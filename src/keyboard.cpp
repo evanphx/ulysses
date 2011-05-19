@@ -6,9 +6,12 @@
 
 Keyboard keyboard = {{0x60}, {0x64}};
 
-static void keyboard_callback(registers_t* regs) {
-  keyboard.pressed();
-}
+class KeyboardCallback : public interrupt::Handler {
+public:
+  void handle(Registers* regs) {
+    keyboard.pressed();
+  }
+};
 
 KeyboardKeyType Keyboard::mapping[128] = 
 {
@@ -136,5 +139,7 @@ void Keyboard::pressed() {
 void Keyboard::init() {
   shifted = 0;
   map = dv_map;
-  register_interrupt_handler(1, &keyboard_callback);
+
+  static KeyboardCallback callback;
+  interrupt::register_interrupt(1, &callback);
 }

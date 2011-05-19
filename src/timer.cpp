@@ -9,20 +9,26 @@
 
 Timer timer = {0};
 
-static void timer_callback(registers_t *regs) {
-  timer.ticks++;
-  update_clock();
+class TimerCallback : public interrupt::Handler {
+public:
+  void handle(Registers* regs) {
+    timer.ticks++;
+    update_clock();
 
-  scheduler.on_tick();
-  // scheduler.switch_task();
-}
+    scheduler.on_tick();
+    // scheduler.switch_task();
+  }
+};
 
 void Timer::init(u32 frequency) {
   ticks = 0;
 
   init_clock();
+
+  static TimerCallback callback;
+
   // Firstly, register our timer callback.
-  register_interrupt_handler(0, &timer_callback);
+  interrupt::register_interrupt(0, &callback);
 
   // The value we send to the PIT is the value to divide it's input clock
   // (1193180 Hz) by, to get our required frequency. Important to note is

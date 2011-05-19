@@ -163,4 +163,7 @@ void __cxa_pure_virtual() {
   cpu::halt_loop();
 }
 
+void __cxa_guard_acquire() {}
+void __cxa_guard_release() {}
+
 }

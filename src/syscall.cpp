@@ -10,13 +10,11 @@
 #include "task.hpp"
 #include "cpu.hpp"
 
-static void syscall_handler(registers_t *regs);
-
 void sys_kprint(const char* p) {
   console.printf("%d: %s", scheduler.getpid(), p);
 }
 
-void sys_exec(registers_t* regs) {
+void sys_exec(Registers* regs) {
   const char* path = (const char*)regs->ebx;
 
   fs::Node* test = fs_root->finddir(path, strlen(path));
@@ -62,7 +60,6 @@ int sys_open(char* name, int mode) {
 
 int sys_read(int fd, char* buffer, int size) {
   if(fs::File* file = scheduler.current->get_file(fd)) {
-    console.printf("reading %d bytes from %d\n", size, fd);
     if(size == 0) return 0;
     if(size < 0) return -1;
 
@@ -112,54 +109,61 @@ static void* raw_syscalls[] = {
 const static u32 num_syscalls = 10;
 const static u32 num_raw_syscalls = 1;
 
-void initialise_syscalls() {
-  // Register our syscall handler.
-  register_isr_handler(0x80, &syscall_handler);
-}
+class SyscallDispatcher : public interrupt::Handler {
+public:
+  void handle(Registers* regs) {
 
-void syscall_handler(registers_t* regs) {
-  // console.printf("in syscall handler: %d (total %d)\n", regs->eax, num_syscalls);
-  void* location;
+    // console.printf("in syscall handler: %d (total %d)\n", regs->eax, num_syscalls);
+    void* location;
 
-  // Firstly, check if the requested syscall number is valid.
-  // The syscall number is found in EAX.
-  if(regs->eax >= num_syscalls) {
-    if(regs->eax >= raw_syscall_base) {
-      u32 rebase = regs->eax - raw_syscall_base;
-      if(rebase >= num_raw_syscalls) {
+    // Firstly, check if the requested syscall number is valid.
+    // The syscall number is found in EAX.
+    if(regs->eax >= num_syscalls) {
+      if(regs->eax >= raw_syscall_base) {
+        u32 rebase = regs->eax - raw_syscall_base;
+        if(rebase >= num_raw_syscalls) {
+          console.printf("Unknown syscall: %d\n", regs->eax);
+          regs->eax = 1;
+          return;
+        }
+
+        location = raw_syscalls[rebase];
+        ((void (*)(Registers*))location)(regs);
+      } else {
         console.printf("Unknown syscall: %d\n", regs->eax);
         regs->eax = 1;
         return;
       }
-
-      location = raw_syscalls[rebase];
-      ((isr_t)location)(regs);
     } else {
-      console.printf("Unknown syscall: %d\n", regs->eax);
-      regs->eax = 1;
-      return;
-    }
-  } else {
-    // Get the required syscall location.
-    location = syscalls[regs->eax];
+      // Get the required syscall location.
+      location = syscalls[regs->eax];
 
-    // We don't know how many parameters the function wants, so we just
-    // push them all onto the stack in the correct order. The function will
-    // use all the parameters it wants, and we can pop them all back off afterwards.
-    int ret;
-    asm volatile (" \
-        push %1; \
-        push %2; \
-        push %3; \
-        push %4; \
-        push %5; \
-        call *%6; \
-        pop %%ebx; \
-        pop %%ebx; \
-        pop %%ebx; \
-        pop %%ebx; \
-        pop %%ebx; \
-        " : "=a" (ret) : "r" (regs->edi), "r" (regs->esi), "r" (regs->edx), "r" (regs->ecx), "r" (regs->ebx), "r" (location));
-    regs->eax = ret;
+      // We don't know how many parameters the function wants, so we just
+      // push them all onto the stack in the correct order. The function will
+      // use all the parameters it wants, and we can pop them all back off afterwards.
+      int ret;
+      asm volatile (" \
+          push %1; \
+          push %2; \
+          push %3; \
+          push %4; \
+          push %5; \
+          call *%6; \
+          pop %%ebx; \
+          pop %%ebx; \
+          pop %%ebx; \
+          pop %%ebx; \
+          pop %%ebx; \
+          " : "=a" (ret) : "r" (regs->edi), "r" (regs->esi), "r" (regs->edx), "r" (regs->ecx), "r" (regs->ebx), "r" (location));
+      regs->eax = ret;
+    }
   }
+};
+
+void initialise_syscalls() {
+  static SyscallDispatcher dispatcher;
+
+  // Register our syscall handler.
+  interrupt::register_isr(0x80, &dispatcher);
 }
+

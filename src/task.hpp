@@ -28,7 +28,8 @@ struct Task {
   enum State {
     eReady,
     eWaiting,
-    eDead
+    eDead,
+    eIOWait
   };
 
   enum Lists {
@@ -83,6 +84,7 @@ public:
 struct Scheduler {
   u32 next_pid;
   Task* current;
+  Task* task0;
 
   Task::RunList ready_queue;
   Task::RunList cleanup_queue;
@@ -106,6 +108,8 @@ struct Scheduler {
 
   void exit(int code);
   void sleep(int secs);
+
+  void io_wait();
 
   int getpid();
   int wait_any(int* status);

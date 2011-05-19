@@ -346,20 +346,23 @@ void RTL8139::receive(u16int status) {
   }
 }
 
-static void rtl8139_interrupt(registers_t* regs) {
-  u16int status = rtl8139.ack();
+class RTL8139Interrupt : public interrupt::Handler {
+public:
+  void handle(Registers* regs) {
+    u16int status = rtl8139.ack();
 
-  if((status & AllInterrupts) == 0) return;
-  if(status & RxInterrupts) rtl8139.receive(status);
-  if(status & TxInterrupts) {
-    int tx_status = rtl8139.last_tx_status();
-    if(tx_status == TxOK) {
-      kputs("Got a TxOK interrupt.\n");
-    } else {
-      kputs("Got a TxErr interrupt.\n");
+    if((status & AllInterrupts) == 0) return;
+    if(status & RxInterrupts) rtl8139.receive(status);
+    if(status & TxInterrupts) {
+      int tx_status = rtl8139.last_tx_status();
+      if(tx_status == TxOK) {
+        kputs("Got a TxOK interrupt.\n");
+      } else {
+        kputs("Got a TxErr interrupt.\n");
+      }
     }
   }
-}
+};
 
 void RTL8139::transmit(u8int* buf, int size) {
   int entry = tx_desc;
@@ -481,7 +484,8 @@ void RTL8139::init() {
   reset_rx_stats();
   enable_tx_rx();
 
-  register_interrupt_handler(irq, &rtl8139_interrupt);
+  static RTL8139Interrupt handler;
+  interrupt::register_interrupt(irq, &handler);
 }
 
 err_t rtl8139_open(struct netif* netif) {

@@ -3,6 +3,7 @@
 
 #include "string.hpp"
 #include "block.hpp"
+#include "isr.hpp"
 
 namespace ata {
   struct DriveInfo {
@@ -112,21 +113,47 @@ namespace ata {
 
   void fixstring(u8* s, int count);
 
+  class Disk;
+
+  class ATAInterrupt : public interrupt::Handler {
+    Disk* disk_;
+    block::Buffer* request_buffer_;
+    u32 read_bytes_;
+    u32 bytes_per_read_;
+
+  public:
+
+    ATAInterrupt(Disk* disk)
+      : disk_(disk)
+      , request_buffer_(0)
+      , read_bytes_(0)
+      , bytes_per_read_(0)
+    {}
+
+    void add_request(block::Buffer* buffer);
+    void handle(Registers* regs);
+  };
+
   class Disk : public block::Device {
     IOPort io_;
     IOPort control_;
     u8 select_;
     DriveInfo info_;
-    u32 signature_;
+
+    ATAInterrupt interrupt_;
 
   public:
     Disk(const char* name, u16 port, u8 unit)
       : block::Device(name)
       , select_(0xA0 | (unit << 4))
-      , signature_(0)
+      , interrupt_(this)
     {
       io_.port = port;
       control_.port = port + 0x206;
+    }
+
+    interrupt::Handler* interrupt_handler() {
+      return &interrupt_;
     }
 
   public:
@@ -139,20 +166,26 @@ namespace ata {
     void request_lba(u32 block, u8 count);
     void show_status();
   
+    void fulfill(block::Buffer* buffer);
     void read_block(u32 block, u8* buffer);
 
-    void detect_partitions();
-
+    void wait_til_ready();
     void disable_irq();
     void enable_irq();
 
     bool lba48_p();
     bool lba28_p();
 
+    u8   status();
+
+    void clear_irq();
+
     bool ready_p();
     bool error_p();
     bool drq_p();
     bool busy_p();
+
+    bool success_p();
   };
 
   void detect();

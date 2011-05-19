@@ -29,9 +29,6 @@ idt_entry_t idt_entries[256];
 idt_ptr_t   idt_ptr;
 tss_entry_t tss_entry;
 
-// Extern the ISR handler array so we can nullify them on startup.
-extern isr_t interrupt_handlers[];
-
 // Initialisation routine - zeroes all the interrupt service routines,
 // initialises the GDT and IDT.
 void init_descriptor_tables() {
@@ -40,7 +37,7 @@ void init_descriptor_tables() {
   // Initialise the interrupt descriptor table.
   init_idt();
   // Nullify all the interrupt handlers.
-  memset((u8int*)&interrupt_handlers, 0, sizeof(isr_t)*256);
+  interrupt::init();
 }
 
 static void init_gdt() {

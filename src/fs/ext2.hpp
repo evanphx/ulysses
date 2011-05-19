@@ -245,7 +245,6 @@ namespace ext2 {
   public:
     bool validate();
     void print_features();
-    GroupDesc* read_block_groups(block::Device* dev, u32* total);
   };
 
   enum CreatorOS {
@@ -322,13 +321,30 @@ namespace ext2 {
     u32 total_groups_;
     GroupDesc* groups_;
 
+    u32 block_per_region_;
+    u32 bytes_per_block_;
+    u32 inode_per_block_;
+
   public:
     block::Device* device() {
       return device_;
     }
 
+    u32 b2r(u32 block) {
+      return block * block_per_region_;
+    }
+
+    u32 bytes_per_block() {
+      return bytes_per_block_;
+    }
+
+    u32 inode_per_block() {
+      return inode_per_block_;
+    }
+
     FS(block::Device* dev);
 
+    GroupDesc* read_block_groups();
     SuperBlock* read_superblock();
 
     Node* root();
