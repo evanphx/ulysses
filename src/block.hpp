@@ -11,6 +11,7 @@ namespace block {
   const static u32 BlockSize = 1024;
 
   class Device;
+  class Buffer;
 
   class Registry {
   public:
@@ -34,10 +35,10 @@ namespace block {
 
   extern Registry registry;
 
-  struct BlockCacheOperations {
-    static u32 compute_hash(u32 key) {
+  struct RegionCacheOperations {
+    static u32 compute_hash(RegionRange& key) {
       // See http://burtleburtle.net/bob/hash/integer.html
-      register u32 a = key;
+      register u32 a = key.start() ^ key.size();
       a = (a+0x7ed55d16) + (a<<12);
       a = (a^0xc761c23c) ^ (a>>19);
       a = (a+0x165667b1) + (a<<5);
@@ -47,12 +48,15 @@ namespace block {
       return a;
     }
 
-    static bool compare_keys(u32 a, u32 b) {
-      return a == b;
+    static bool compare_keys(RegionRange& a, RegionRange& b) {
+      return a.start() == b.start() && a.size() == b.size();
     }
   };
 
-  typedef sys::HashTable<u32, u8*, BlockCacheOperations> BlockCache;
+  typedef sys::HashTable<RegionRange, Buffer*,
+                         RegionCacheOperations> RegionCache;
+
+  typedef sys::IdentityHash<u32, Buffer*> BufferCache;
 
   class Buffer;
 
@@ -61,7 +65,7 @@ namespace block {
     sys::FixedString<8> name_;
     int id_;
 
-    BlockCache cache_;
+    RegionCache cache_;
     u32 signature_;
 
   public:
@@ -78,13 +82,9 @@ namespace block {
       return name_.c_str();
     }
 
-    u8* find_block(u32 block);
-
-    Buffer* request(RegionRange& range);
+    Buffer* request(RegionRange range);
     virtual void fulfill(Buffer* buffer) = 0;
 
-    virtual void read_block(u32 block, u8* buffer) = 0;
-    u8* read(u32 block, u8 count);
     u32 read_bytes(u32 byte_offset, u32 byte_size, u8* buffer);
 
     void detect_partitions();
@@ -107,7 +107,6 @@ namespace block {
     {}
 
     void fulfill(Buffer* buffer);
-    void read_block(u32 block, u8* buffer);
   };
 
 }

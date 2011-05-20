@@ -7,6 +7,7 @@
 #include "common.hpp"
 #include "string.hpp"
 #include "block.hpp"
+#include "hash_table.hpp"
 
 #define FS_FILE        0x01
 #define FS_DIRECTORY   0x02
@@ -50,6 +51,7 @@ namespace fs {
   public:
     File(Node* node);
     s32 read(u8* buffer, u32 size);
+    void seek(int pos, int whence);
   };
 
   class Registry;

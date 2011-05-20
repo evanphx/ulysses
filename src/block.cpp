@@ -35,68 +35,56 @@ namespace block {
     }
   }
 
-  u8* Device::read(u32 block, u8 count) {
-    u32 size = count * BlockSize;
-    u8* buffer = (u8*)kmalloc(size);
-
-    read_block(block, buffer);
-    return buffer;
-  }
-
-  u8* Device::find_block(u32 block) {
-    u8* buffer = 0;
-    if(cache_.fetch(block, &buffer)) {
-    } else {
-      buffer = (u8*)kmalloc(BlockSize);
-      read_block(block, buffer);
-      cache_.store(block, buffer);
+  block::Buffer* Device::request(block::RegionRange range) {
+    block::Buffer* buffer;
+    if(cache_.fetch(range, &buffer)) {
+      return buffer;
     }
 
-    return buffer;
-  }
-
-  block::Buffer* Device::request(block::RegionRange& range) {
     u32 num_bytes = range.num_bytes();
-    block::Buffer* buffer = block::Buffer::for_size(this, num_bytes);
+    buffer = block::Buffer::for_size(this, num_bytes);
     buffer->set_range(range);
+
+    cache_.store(range, buffer);
 
     return buffer;
   }
 
   u32 Device::read_bytes(u32 offset, u32 size, u8* out_buffer) {
+    u32 cur_region = offset / cRegionSize;
 
-    u32 cur_block = offset / BlockSize;
-
-    u32 initial_offset = offset % BlockSize;
+    u32 initial_offset = offset % cRegionSize;
 
     u32 left = size;
 
     // Do the first block by itself to deal with the
     // initial offset here.
-    u8* buffer = find_block(cur_block);
+    block::Buffer* buffer = request(block::RegionRange(cur_region, 1));
+    buffer->wait();
 
     if(left > BlockSize) {
-      u32 copy_bytes = BlockSize - initial_offset;
-      memcpy(out_buffer, buffer + initial_offset, copy_bytes);
+      u32 copy_bytes = cRegionSize - initial_offset;
+      memcpy(out_buffer, buffer->data() + initial_offset, copy_bytes);
       out_buffer += copy_bytes;
       left -= copy_bytes;
     } else {
       // Satisfied all out of the first block! Woo!
-      memcpy(out_buffer, buffer + initial_offset, left);
+      memcpy(out_buffer, buffer->data() + initial_offset, left);
       return size;
     }
 
     while(left > 0) {
-      cur_block++;
+      cur_region++;
 
-      buffer = find_block(cur_block);
+      buffer = request(block::RegionRange(cur_region, 1));
+      buffer->wait();
 
-      if(left > BlockSize) {
-        memcpy(out_buffer, buffer, BlockSize);
-        left -= BlockSize;
+      if(left > cRegionSize) {
+        memcpy(out_buffer, buffer->data(), cRegionSize);
+        left -= cRegionSize;
         out_buffer += BlockSize;
       } else {
-        memcpy(out_buffer, buffer, left);
+        memcpy(out_buffer, buffer->data(), left);
         left = 0;
       }
     }
@@ -152,9 +140,5 @@ namespace block {
 
   void SubDevice::fulfill(Buffer* buf) {
     parent_->fulfill(buf);
-  }
-
-  void SubDevice::read_block(u32 block, u8* buffer) {
-    parent_->read_block(block + offset_, buffer);
   }
 }

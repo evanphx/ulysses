@@ -48,6 +48,16 @@ namespace block {
       return data_;
     }
 
+    template <typename T>
+      T as() {
+        return (T)data_;
+      }
+
+    template <typename T>
+      T index(u32 i) {
+        return ((T*)data_)[i];
+      }
+
     bool free_p() {
       return (state_ & eFree) == eFree;
     }

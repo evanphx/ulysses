@@ -25,17 +25,6 @@ namespace ext2 {
     return 0;
   }
 
-  FS::FS(block::Device* dev)
-    : device_(dev)
-  {
-    block_per_region_ = 1;
-    bytes_per_block_ = 1024;
-  }
-
-  void FS::print_description() {
-    super_block_->print_features();
-  }
-
   bool SuperBlock::validate() {
     return magic == cMagic;
   }
@@ -102,21 +91,118 @@ namespace ext2 {
     console.printf("\n");
   }
 
+  FS::FS(block::Device* dev)
+    : device_(dev)
+  {
+    // Sensible defaults, changed when the superblock is read.
+    block_per_region_ = 1;
+    bytes_per_block_ = 1024;
+    ids_per_block_ = 256;
+    ids_per_second_level_ = ids_per_block_ * ids_per_block_;
+  }
+
+  void FS::print_description() {
+    super_block_->print_features();
+  }
+
+  block::Buffer* FS::async_read_block(u32 block, u32 count) {
+    block::RegionRange range(b2r(block), b2r(count));
+    block::Buffer* buffer = device_->request(range);
+
+    return buffer;
+  }
+
+  block::Buffer* FS::read_block(u32 block, u32 count) {
+    block::RegionRange range(b2r(block), b2r(count));
+    block::Buffer* buffer = device_->request(range);
+
+    buffer->wait();
+
+    return buffer;
+  }
+
+  block::Buffer* FS::read_inode_block(u32 inode, Inode* obj, u32 block) {
+    block::Buffer* buffer;
+    u32 id;
+
+    u32 key = block_cache_key(inode, block);
+
+    if(block_cache_.fetch(key, &buffer)) {
+      return buffer;
+    }
+
+    // Read the block id directly.
+    if(block < NumDirectBlocks) {
+      buffer = read_block(obj->blocks[block]);
+      block_cache_.store(key, buffer);
+      return buffer;
+    }
+
+    block -= NumDirectBlocks;
+
+    // Read via a single indirection table
+    if(block < ids_per_block_) {
+      buffer = read_block(obj->blocks[eIndirectBlock]);
+
+      id = buffer->index<u32>(block);
+      if(!id) return 0;
+
+      buffer = read_block(id);
+      block_cache_.store(key, buffer);
+      return buffer;
+    }
+
+    block -= ids_per_block_;
+
+    // Read via 2 indirection tables
+    if(block < ids_per_second_level_) {
+      buffer = read_block(obj->blocks[eDoubleIndirectBlock]);
+
+      id = buffer->index<u32>(block / ids_per_block_);
+      if(!id) return 0;
+
+      buffer = read_block(id);
+
+      id = buffer->index<u32>(block % ids_per_block_);
+      if(!id) return 0;
+
+      buffer = read_block(id);
+      block_cache_.store(key, buffer);
+      return buffer;
+    }
+
+    // Read via 3 indirection tables
+    block -= ids_per_second_level_;
+    buffer = read_block(obj->blocks[eTripleIndirectBlock]);
+
+    id = buffer->index<u32>(block / ids_per_second_level_);
+    if(!id) return 0;
+
+    buffer = read_block(id);
+
+    id = buffer->index<u32>(block / ids_per_block_);
+    if(!id) return 0;
+
+    buffer = read_block(id);
+
+    id = buffer->index<u32>(block % ids_per_block_);
+    if(!id) return 0;
+
+    buffer = read_block(id);
+    block_cache_.store(key, buffer);
+    return buffer;
+  }
+
   GroupDesc* FS::read_block_groups() {
     total_groups_ = (super_block_->blocks_count -
                      super_block_->first_data_block +
                      super_block_->blocks_per_group - 1)
                   / super_block_->blocks_per_group;
 
-    console.printf("Group count: %d\n", total_groups_);
-
     u32 table_size = sizeof(GroupDesc) * total_groups_;
     groups_ = (GroupDesc*)kmalloc(table_size);
 
-    block::RegionRange range(b2r(2), b2r(total_groups_));
-    block::Buffer* buffer = device_->request(range);
-
-    buffer->wait();
+    block::Buffer* buffer = read_block(2, total_groups_);
 
     memcpy((u8*)groups_, buffer->data(), table_size);
     return groups_;
@@ -139,31 +225,18 @@ namespace ext2 {
     super_block_ = sb;
 
     bytes_per_block_ = 1024 << sb->log_block_size;
+
+    ASSERT(bytes_per_block_ >= block::cRegionSize);
+
+    block_per_region_ = bytes_per_block_ / block::cRegionSize;
     inode_per_block_ = bytes_per_block_ / sb->inode_size;
+
+    ids_per_block_ = bytes_per_block_ / sizeof(u32);
+    ids_per_second_level_ = ids_per_block_ * ids_per_block_;
 
     read_block_groups();
     return sb;
   }
-
-  /*
-  void FS::init() {
-    head_ = 0;
-
-    root_ = new(kheap) Node;
-    root_->name[0] = '/';
-    root_->name[1] = 0;
-
-    root_->mask = 0;
-    root_->uid = 0;
-    root_->gid = 0;
-    root_->flags = FS_DIRECTORY;
-    root_->block_dev = 0;
-    root_->inode = 0;
-    root_->length = 0;
-    root_->delegate = 0;
-    root_->next = 0;
-  }
-  */
 
   Node* FS::root() {
     Node* node = new(kheap) Node;
@@ -184,8 +257,6 @@ namespace ext2 {
   }
 
   u32 Node::read(u32 offset, u32 size, u8* user) {
-    // console.printf("reading from inode %d, offset=%d\n", inode, offset);
-
     Inode* obj = fs_->find_inode(inode);
 
     u32 bpb = fs_->bytes_per_block();
@@ -193,18 +264,11 @@ namespace ext2 {
     u32 cur_block = offset / bpb;
     u32 initial_offset = offset % bpb;
 
-    ASSERT(cur_block + (size / bpb) < 12);
-
-    u32 block1 = obj->blocks[cur_block];
-
     u32 b1_size = bpb - initial_offset;
 
     if(b1_size > size) b1_size = size;
 
-    block::RegionRange range(fs_->b2r(block1), fs_->b2r(1));
-    block::Buffer* buffer = fs_->device()->request(range);
-
-    buffer->wait();
+    block::Buffer* buffer = fs_->read_inode_block(inode, obj, cur_block++);
 
     memcpy((u8*)user, buffer->data() + initial_offset, b1_size);
 
@@ -214,27 +278,18 @@ namespace ext2 {
 
     user += b1_size;
 
-    cur_block++;
-
-    for(; cur_block < NumDirectBlocks; cur_block++) {
+    while(left > 0) {
       u32 read_size = (left > bpb) ? bpb : left;
 
-      u32 block_id = obj->blocks[cur_block];
-      block::RegionRange range(fs_->b2r(block_id), fs_->b2r(1));
-      block::Buffer* buffer = fs_->device()->request(range);
-
-      buffer->wait();
+      buffer = fs_->read_inode_block(inode, obj, cur_block++);
 
       memcpy((u8*)user, buffer->data(), read_size);
 
       user += read_size;
       left -= read_size;
-      if(left == 0) return size;
     }
 
-    // Don't get here.
-    ASSERT(0);
-    return -1;
+    return size;
   }
 
   void Inode::print_info() {
@@ -282,19 +337,10 @@ namespace ext2 {
 
     GroupDesc* group = &groups_[bg];
 
-    // u32 group_offset = adj_inode % super_block_->inodes_per_group;
-
     u32 block = group->inode_table + (adj_inode / inode_per_block());
     u32 block_offset = adj_inode % inode_per_block();
 
-    // console.printf("inode %d: bg=%d, go=%d, block=%d, block_offset=%d\n",
-                   // inode, bg, group_offset, block, block_offset);
-               
-    block::RegionRange range(b2r(block), b2r(1));
-
-    block::Buffer* buffer = device_->request(range);
-
-    buffer->wait();
+    block::Buffer* buffer = read_block(block);
 
     Inode* inode_obj = (Inode*)kmalloc(super_block_->inode_size);
 
@@ -306,7 +352,6 @@ namespace ext2 {
   }
 
   Node* Node::finddir(const char* name, int len) {
-    // console.printf("look for '%s' (%d) in ext2\n", name, len);
     Inode* obj = fs_->find_inode(inode);
 
     if(!obj->directory_p()) {
@@ -318,23 +363,22 @@ namespace ext2 {
 
     u32 block1 = obj->blocks[0];
 
-    block::RegionRange range(fs_->b2r(block1), fs_->b2r(1));
-
-    block::Buffer* buffer = fs_->device()->request(range);
-
-    buffer->wait();
+    block::Buffer* buffer = fs_->read_block(block1);
 
     u8* entries = buffer->data();
 
-    u8* fin = entries + 1024;
+    u8* fin = entries + fs_->bytes_per_block();
 
     while(entries < fin) {
       DirEntry* dir = (DirEntry*)entries;
 
       if(!strncmp(dir->name, name, len)) {
+        Node* node = fs_->find_in_use(dir->inode);
+        if(node) return node;
+
         Inode* target = fs_->find_inode(dir->inode);
 
-        Node* node = new(kheap) Node;
+        node = new(kheap) Node;
 
         memcpy((u8*)node->name, (u8*)dir->name, dir->name_len);
         node->name[dir->name_len] = 0;
@@ -354,6 +398,8 @@ namespace ext2 {
 
         node->delegate = 0;
         node->fs_ = fs_;
+
+        fs_->make_in_use(dir->inode, node);
 
         return node;
       }

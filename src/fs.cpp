@@ -21,6 +21,21 @@ namespace fs {
     return count;
   }
 
+  void File::seek(int pos, int whence) {
+    switch(whence) {
+    default:
+    case 0: // SEEK_SET
+      offset_ = (u32)pos;
+      break;
+    case 1: // SEEK_CUR
+      offset_ = (u32)((int)offset_ + pos);
+      break;
+    case 2: // SEEK_END
+      offset_ = (u32)((int)node_->length + pos);
+      break;
+    }
+  }
+
   Node* lookup(const char* name, int len, fs::Node* dir) {
     int sub_len = 0;
     while(sub_len < len) {

@@ -4,8 +4,8 @@
 #include "common.hpp"
 
 namespace block {
-  const static int cRegionSize = 1024;
-  const static int cSectorPerRegion = 2;
+  const static u32 cRegionSize = 1024;
+  const static u32 cSectorPerRegion = 2;
 
   static inline int byte2region(int count) {
     return count / cRegionSize;
@@ -26,6 +26,10 @@ namespace block {
 
     u32 start() {
       return start_;
+    }
+
+    u32 size() {
+      return size_;
     }
 
     u32 end() {

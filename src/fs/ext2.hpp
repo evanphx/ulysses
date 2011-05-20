@@ -48,6 +48,12 @@ namespace ext2 {
 
   const static u32 NumDirectBlocks = 12;
 
+  enum SpecialBlocks {
+    eIndirectBlock = 12,
+    eDoubleIndirectBlock = 13,
+    eTripleIndirectBlock = 14
+  };
+
   struct Inode {
     u16 mode;
     u16 uid;
@@ -324,6 +330,13 @@ namespace ext2 {
     u32 block_per_region_;
     u32 bytes_per_block_;
     u32 inode_per_block_;
+    u32 ids_per_block_;
+    u32 ids_per_second_level_;
+
+    typedef sys::IdentityHash<u32, Node*> Nodes;
+
+    Nodes nodes_in_use_;
+    block::BufferCache block_cache_;
 
   public:
     block::Device* device() {
@@ -342,7 +355,28 @@ namespace ext2 {
       return inode_per_block_;
     }
 
+    u32 ids_per_block() {
+      return ids_per_block_;
+    }
+
+    Node* find_in_use(u32 inode) {
+      Node* node;
+      if(nodes_in_use_.fetch(inode, &node)) {
+        return node;
+      }
+
+      return 0;
+    }
+
+    void make_in_use(u32 inode, Node* node) {
+      nodes_in_use_.store(inode, node);
+    }
+
     FS(block::Device* dev);
+
+    block::Buffer* async_read_block(u32 block, u32 count=1);
+    block::Buffer* read_block(u32 block, u32 count=1);
+    block::Buffer* read_inode_block(u32 inode, Inode* obj, u32 block);
 
     GroupDesc* read_block_groups();
     SuperBlock* read_superblock();
@@ -351,6 +385,10 @@ namespace ext2 {
     void print_description();
     Inode* find_inode(u32 inode);
   };
+
+  static inline u32 block_cache_key(u32 inode, u32 block) {
+    return inode ^ block;
+  }
 
   struct Node : public fs::Node {
     FS* fs_;

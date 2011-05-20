@@ -74,6 +74,15 @@ int sys_mount(const char* path, const char* fstype, const char* dev) {
   return fs::mount(path, fstype, dev);
 }
 
+int sys_seek(int fd, int pos, int whence) {
+  if(fs::File* file = scheduler.current->get_file(fd)) {
+    file->seek(pos, whence);
+    return 0;
+  }
+
+  return -1;
+}
+
 const static u32 raw_syscall_base = 1024;
 
 DEFN_SYSCALL1(kprint, 0, const char*);
@@ -86,6 +95,7 @@ DEFN_SYSCALL1(wait_any, 6, int*);
 DEFN_SYSCALL2(open, 7, char*, int);
 DEFN_SYSCALL3(read, 8, int, char*, int);
 DEFN_SYSCALL3(mount, 9, char*, char*, char*);
+DEFN_SYSCALL3(seek, 10, int, int, int);
 
 DEFN_SYSCALL1(exec, raw_syscall_base + 0, const char*);
 
@@ -99,14 +109,15 @@ static void* syscalls[] = {
     (void*)&sys_wait_any,
     (void*)&sys_open,
     (void*)&sys_read,
-    (void*)&sys_mount
+    (void*)&sys_mount,
+    (void*)&sys_seek
 };
 
 static void* raw_syscalls[] = {
     (void*)&sys_exec
 };
 
-const static u32 num_syscalls = 10;
+const static u32 num_syscalls = 11;
 const static u32 num_raw_syscalls = 1;
 
 class SyscallDispatcher : public interrupt::Handler {
