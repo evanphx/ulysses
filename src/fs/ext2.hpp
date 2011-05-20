@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "block.hpp"
 #include "fs.hpp"
+#include "pair.hpp"
 
 namespace ext2 {
 
@@ -334,9 +335,10 @@ namespace ext2 {
     u32 ids_per_second_level_;
 
     typedef sys::IdentityHash<u32, Node*> Nodes;
+    typedef sys::OOHash<sys::Pair<u32,u32>, block::Buffer*> BufferCache;
 
     Nodes nodes_in_use_;
-    block::BufferCache block_cache_;
+    BufferCache block_cache_;
 
   public:
     block::Device* device() {

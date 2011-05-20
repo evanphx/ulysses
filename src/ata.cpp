@@ -447,11 +447,12 @@ namespace ata {
           return;
         }
 
-        int devices = 0;
+        char devices = 0;
 
         for(int i = 0; i < defaults; i++) {
           for(int u = 0; u < unit_per_port; u++) {
-            const char name[4] = {'a', 'd', 'a' + devices++, 0 };
+            const char which = 'a' + devices++;
+            const char name[4] = {'a', 'd', which, 0 };
             Disk* disk = probe(default_ports[i], u, name);
             if(disk) {
               interrupt::register_interrupt(default_irqs[i],

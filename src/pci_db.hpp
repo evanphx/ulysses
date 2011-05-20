@@ -1576,8 +1576,8 @@ PCI_VENTABLE	PciVenTable [] =
 
 typedef struct _PCI_DEVTABLE
 {
-	unsigned short	VenId ;
-	unsigned short	DevId ;
+	unsigned int VenId ;
+	unsigned int DevId ;
 	const char*	Chip ;
 	const char*	ChipDesc ;
 }  PCI_DEVTABLE, *PPCI_DEVTABLE ;

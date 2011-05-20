@@ -125,7 +125,7 @@ namespace ext2 {
     block::Buffer* buffer;
     u32 id;
 
-    u32 key = block_cache_key(inode, block);
+    auto key = sys::pair(inode, block);
 
     if(block_cache_.fetch(key, &buffer)) {
       return buffer;

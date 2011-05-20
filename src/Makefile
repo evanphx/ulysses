@@ -26,8 +26,8 @@ LIBGCC=`$(CC) -print-libgcc-file-name`
 LDFLAGS=--oformat=elf32-i386 -melf_i386 -Tlink.ld
 ASFLAGS=-felf
 
-CC=../buildtools/local/bin/i386-pc-ulysses-g++
-CXX=../buildtools/local/bin/i386-pc-ulysses-g++
+CC=../buildtools/local/bin/i386-pc-ulysses-g++ -std=c++0x
+CXX=../buildtools/local/bin/i386-pc-ulysses-g++ -std=c++0x
 
 LD=../buildtools/local/bin/i386-pc-ulysses-ld
 

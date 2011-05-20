@@ -187,6 +187,28 @@ namespace sys {
 
   template <typename K, typename V>
     class IdentityHash : public HashTable<K, V, IdentityHashOperations<K> > {};
+
+  template <typename K>
+  struct OOHashOperations {
+    static u32 compute_hash(K k) {
+      // See http://burtleburtle.net/bob/hash/integer.html
+      register u32 a = k.hash();
+      a = (a+0x7ed55d16) + (a<<12);
+      a = (a^0xc761c23c) ^ (a>>19);
+      a = (a+0x165667b1) + (a<<5);
+      a = (a+0xd3a2646c) ^ (a<<9);
+      a = (a+0xfd7046c5) + (a<<3);
+      a = (a^0xb55a4f09) ^ (a>>16);
+      return a;
+    }
+
+    static bool compare_keys(K a, K b) {
+      return a == b;
+    }
+  };
+
+  template <typename K, typename V>
+    class OOHash : public HashTable<K, V, OOHashOperations<K> > {};
 }
 
 #endif
