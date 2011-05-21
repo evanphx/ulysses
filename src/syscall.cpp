@@ -70,6 +70,18 @@ int sys_read(int fd, char* buffer, int size) {
   }
 }
 
+int sys_write(int fd, int size, char* buffer) {
+  if(fs::File* file = scheduler.current->get_file(fd)) {
+    if(size == 0) return 0;
+    if(size < 0) return -1;
+
+    return (int)file->write((u8*)buffer, (u32)size);
+  } else {
+    console.printf("unable to find fd %d\n", fd);
+    return -1;
+  }
+}
+
 int sys_mount(const char* path, const char* fstype, const char* dev) {
   return fs::mount(path, fstype, dev);
 }
@@ -81,6 +93,12 @@ int sys_seek(int fd, int pos, int whence) {
   }
 
   return -1;
+}
+
+u32 sys_sbrk(int bytes) {
+  u32 addr = scheduler.current->change_heap(bytes);
+  console.printf("sbrk = %x\n", addr);
+  return addr;
 }
 
 const static u32 raw_syscall_base = 1024;
@@ -96,6 +114,8 @@ DEFN_SYSCALL2(open, 7, char*, int);
 DEFN_SYSCALL3(read, 8, int, char*, int);
 DEFN_SYSCALL3(mount, 9, char*, char*, char*);
 DEFN_SYSCALL3(seek, 10, int, int, int);
+DEFN_SYSCALL3(write, 11, int, int, char*);
+DEFN_SYSCALL1(sbrk, 12, int);
 
 DEFN_SYSCALL1(exec, raw_syscall_base + 0, const char*);
 
@@ -110,14 +130,16 @@ static void* syscalls[] = {
     (void*)&sys_open,
     (void*)&sys_read,
     (void*)&sys_mount,
-    (void*)&sys_seek
+    (void*)&sys_seek,
+    (void*)&sys_write,
+    (void*)&sys_sbrk
 };
 
 static void* raw_syscalls[] = {
     (void*)&sys_exec
 };
 
-const static u32 num_syscalls = 11;
+const static u32 num_syscalls = 13;
 const static u32 num_raw_syscalls = 1;
 
 class SyscallDispatcher : public interrupt::Handler {

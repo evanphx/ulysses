@@ -21,6 +21,14 @@ namespace fs {
     return count;
   }
 
+  s32 File::write(u8* buffer, u32 size) {
+    s32 count = node_->write(offset_, size, buffer);
+    if(count < 0) return count;
+    offset_ += count;
+
+    return count;
+  }
+
   void File::seek(int pos, int whence) {
     switch(whence) {
     default:

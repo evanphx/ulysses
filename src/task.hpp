@@ -56,6 +56,8 @@ struct Task {
   sys::ListNode<Task> lists[cTotal];
   MMapList mmaps;
 
+  MemoryMapping* break_mapping;
+
   fs::File* fds_[16];
 
 public:
@@ -76,6 +78,7 @@ public:
 
   void add_mmap(fs::Node* node, u32 offset, u32 size, u32 addr, u32 mem_size, int flags);
   MemoryMapping* find_mapping(u32 addr);
+  u32 change_heap(int bytes);
 
   int open_file(const char* name, int mode);
   fs::File* get_file(int fd);
@@ -116,6 +119,9 @@ struct Scheduler {
 
   void switch_to_user_mode();
   void on_tick();
+
+  void* heap_start();
+  void* change_heap(int bytes);
 };
 
 extern Scheduler scheduler;

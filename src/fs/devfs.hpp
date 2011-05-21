@@ -4,19 +4,34 @@
 #include "common.hpp"
 #include "fs.hpp"
 #include "block.hpp"
+#include "character.hpp"
 
 namespace devfs {
+
   struct Node : public fs::Node {
     Node* next;
+    Node* finddir(const char* name, int len);
+  };
 
+  struct BlockNode : public Node {
     block::Device* block_dev;
 
-    virtual u32 read(u32 offset, u32 size, u8* buffer);
-    virtual u32 write(u32 offset, u32 size, u8* buffer);
-    virtual void open();
-    virtual void close();
-    virtual struct dirent* readdir(u32 index);
-    virtual Node* finddir(const char* name, int len);
+    u32 read(u32 offset, u32 size, u8* buffer);
+
+    Node* finddir(const char* name, int len) {
+      return 0;
+    }
+  };
+
+  struct CharacterNode : public Node {
+    character::Device* char_dev;
+
+    u32 read(u32 offset, u32 size, u8* buffer);
+    u32 write(u32 offset, u32 size, u8* buffer);
+
+    Node* finddir(const char* name, int len) {
+      return 0;
+    }
   };
 
   class RegisteredFS : public fs::RegisteredFS {
@@ -45,8 +60,8 @@ namespace devfs {
     }
 
     void init();
-    Node* make_node(block::Device* dev, const char* name);
     void add_block_device(block::Device* dev, const char* name);
+    void add_char_device(character::Device* dev, const char* name);
   };
 
 

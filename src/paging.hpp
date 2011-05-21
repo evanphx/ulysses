@@ -71,7 +71,8 @@ public:
   enum Flags {
     eReadable = 1,
     eWritable = 2,
-    eExecutable = 4
+    eExecutable = 4,
+    eAll = 7
   };
 
   MemoryMapping(u32 address, u32 mem_size, fs::Node* node, u32 offset, u32 size,
@@ -90,6 +91,14 @@ public:
 
   u32 mem_size() {
     return mem_size_;
+  }
+
+  u32 end_address() {
+    return address_ + mem_size_;
+  }
+
+  void enlarge_mem_size(u32 ammount) {
+    mem_size_ += ammount;
   }
 
   fs::Node* node() {

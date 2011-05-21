@@ -51,6 +51,7 @@ namespace fs {
   public:
     File(Node* node);
     s32 read(u8* buffer, u32 size);
+    s32 write(u8* buffer, u32 size);
     void seek(int pos, int whence);
   };
 

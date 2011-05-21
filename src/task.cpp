@@ -19,6 +19,7 @@ Task::Task(int pid)
   : id(pid)
   , alarm_at(0)
   , exit_code(0)
+  , break_mapping(0)
 {
   for(int i = 0; i < 16; i++) {
     fds_[i] = 0;
@@ -72,6 +73,20 @@ MemoryMapping* Task::find_mapping(u32 addr) {
   }
 
   return 0;
+}
+
+u32 Task::change_heap(int bytes) {
+  if(!break_mapping) {
+    int flags = MemoryMapping::eAll;
+    u32 addr = 0x2000000;
+    MemoryMapping mapping(addr, bytes, 0, 0, 0, flags);
+    break_mapping = &mmaps.append(mapping);
+    return addr;
+  }
+
+  u32 ret = break_mapping->end_address();
+  break_mapping->enlarge_mem_size(bytes);
+  return ret;
 }
 
 extern "C" void* save_registers(volatile Task::SavedRegisters*);

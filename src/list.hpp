@@ -181,7 +181,7 @@ namespace sys {
       }
     }
 
-    void append(T elem) {
+    T& append(T elem) {
       Node* node = new(kheap) Node(elem);
 
       count_++;
@@ -192,6 +192,8 @@ namespace sys {
 
       tail_ = node;
       if(!head_) head_ = tail_;
+
+      return node->elem;
     }
 
     void prepend(T elem) {

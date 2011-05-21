@@ -17,6 +17,7 @@
 #include "block.hpp"
 #include "fs/devfs.hpp"
 #include "fs/ext2.hpp"
+#include "character/console.hpp"
 
 #include "cpu.hpp"
 
@@ -132,6 +133,7 @@ void kmain2() {
   ext2::init();
 
   block::registry.init();
+  console_driver::init();
 
   pci_bus.init();
 
