@@ -19,9 +19,6 @@ STACKSIZE equ 0x4000
 [BITS 32]                       ; All instructions should be 32-bit.
 
 [GLOBAL mboot]                  ; Make 'mboot' accessible from C.
-[EXTERN code]                   ; Start of the '.text' section.
-[EXTERN bss]                    ; Start of the .bss section.
-[EXTERN end]                    ; End of the last loadable section.
 
 [EXTERN kernel_start]
 [EXTERN kernel_end]
@@ -33,7 +30,7 @@ mboot:
     dd  MBOOT_CHECKSUM          ; To ensure that the above values are correct
     
 [GLOBAL start]                  ; Kernel entry point.
-[EXTERN kmain]                   ; This is the entry point of our C code
+[EXTERN kmain]                  ; This is the entry point of our C code
 
 start:
     ; NOTE: Until paging is set up, the code must be position-independent
@@ -54,11 +51,6 @@ start:
     jmp ecx              ; NOTE: Must be absolute jump!
 
 StartInHigherHalf:
-    ; Unmap the identity-mapped first 4MB of physical address space.
-    ; It should not be needed anymore.
-    ; mov dword [BootPageDirectory], 0
-    ; invlpg [0]
-
     ; NOTE: From now on, paging should be enabled. The first 4MB of
     ; physical address space is mapped starting at KERNEL_VIRTUAL_BASE.
     ; Everything is linked to this address, so no more
