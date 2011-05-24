@@ -93,6 +93,8 @@ extern "C" void* save_registers(volatile Task::SavedRegisters*);
 extern "C" void restore_registers(volatile Task::SavedRegisters*, u32);
 extern "C" void second_return();
 
+extern "C" u8 initial_task;
+
 void Scheduler::init() {
   // Rather important stuff happening, no interrupts please!
   cpu::disable_interrupts();
@@ -104,7 +106,7 @@ void Scheduler::init() {
   waiting_queue.init();
 
   // Initialise the first task (kernel task)
-  u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
+  u32 mem = (u32)&initial_task;
 
   current = new((void*)mem) Task(next_pid++);
   current->directory = vmem.current_directory;

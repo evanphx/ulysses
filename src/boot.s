@@ -14,7 +14,7 @@ MBOOT_CHECKSUM      equ -(MBOOT_HEADER_MAGIC + MBOOT_HEADER_FLAGS)
 KERNEL_VIRTUAL_BASE equ 0xC0000000                  ; 3GB
 KERNEL_PAGE_NUMBER equ (KERNEL_VIRTUAL_BASE >> 22)  ; Page directory index of kernel's 4MB PTE.
 
-STACKSIZE equ 0x4000
+STACKSIZE equ 0x1000
 
 [BITS 32]                       ; All instructions should be 32-bit.
 
@@ -22,6 +22,8 @@ STACKSIZE equ 0x4000
 
 [EXTERN kernel_start]
 [EXTERN kernel_end]
+
+[GLOBAL initial_task]
 
 mboot:
     dd  MBOOT_HEADER_MAGIC      ; GRUB will search for this value on each
@@ -56,7 +58,7 @@ StartInHigherHalf:
     ; Everything is linked to this address, so no more
     ; position-independent code or funny business with virtual-to-physical
     ; address translation should be necessary. We now have a higher-half kernel.
-    mov esp, stack+STACKSIZE    ; set up the stack
+    mov esp, initial_task+STACKSIZE    ; set up the stack
 
     push kernel_end
     push kernel_start
@@ -99,5 +101,5 @@ BootPageDirectory:
 
 section .bss
 align 32
-stack:
+initial_task:
     resb STACKSIZE      ; reserve 16k stack on a quadword boundary
