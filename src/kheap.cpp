@@ -29,9 +29,7 @@ Allocation Heap::allocate(u32 size, int align=0) {
 
 extern "C" {
 
-// end is defined in the linker script.
-extern u32 end;
-u32 placement_address = (u32)&end;
+u32 placement_address;
 
 u32 kmalloc_int(u32 sz, int align, u32 *phys) {
   if(kheap != 0) {
@@ -54,7 +52,7 @@ u32 kmalloc_int(u32 sz, int align, u32 *phys) {
     }
 
     if (phys) {
-      *phys = placement_address;
+      *phys = placement_address - KERNEL_VIRTUAL_BASE;
     }
     u32 tmp = placement_address;
     placement_address += sz;
@@ -176,7 +174,9 @@ static s32 find_smallest_hole(u32 size, u8 page_align, Heap *heap) {
 }
 
 Heap* Heap::create(u32 start, u32 end_addr, u32 max, u8 supervisor, u8 readonly) {
-  Heap *heap = (Heap*)kmalloc(sizeof(Heap));
+  Heap* heap = (Heap*)start;
+
+  start = cpu::page_align(start + sizeof(Heap));
 
   // All our assumptions are made on startAddress and endAddress being page-aligned.
   ASSERT(start%0x1000 == 0);

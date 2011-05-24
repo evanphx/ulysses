@@ -109,6 +109,8 @@ struct Scheduler {
   void switch_task();
   int fork();
 
+  int spawn_thread(void (*func)(void));
+
   void exit(int code);
   void sleep(int secs);
 

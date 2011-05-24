@@ -3,8 +3,9 @@
 //             but rewritten for JamesM's kernel tutorials.
 
 #include "monitor.hpp"
+#include "paging.hpp"
 
-Console console = { (u16*)0xB8000, {0x3D4}, {0x3D5}, 0, 0 };
+Console console = { (u16*)(0xB8000 + KERNEL_VIRTUAL_BASE), {0x3D4}, {0x3D5}, 0, 0 };
 
 void Console::move_cursor() {
   // The screen is 80 characters wide...

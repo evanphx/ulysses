@@ -172,7 +172,7 @@ namespace elf {
     u32        sh_entsize;
   };
 
-  u32 load_node(fs::Node* node);
+  u32 load_node(fs::Node* node, u32* new_esp);
 
 }
 

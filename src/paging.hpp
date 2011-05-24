@@ -9,6 +9,8 @@
 #include "fs.hpp"
 #include "cpu.hpp"
 
+#define KERNEL_VIRTUAL_BASE 0xC0000000
+
 namespace x86 {
   struct Page {
     u32 present    : 1;   // Page present in memory
@@ -138,7 +140,7 @@ struct VirtualMemory {
   u32* frames;
   u32  nframes;
 
-  void init(u32 total_memory);
+  void init(u32 total_memory, u32 kstart, u32 kend, u32 mem_end);
 
   void alloc_frame(x86::Page *page, bool is_kernel=false, bool is_writeable=false);
 

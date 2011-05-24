@@ -10,6 +10,13 @@
 
 #include "common.hpp"
 
+namespace segments {
+  const static u32 cKernelCS = 0x08;
+  const static u32 cKernelDS = 0x10;
+  const static u32 cUserCS = 0x1b;
+  const static u32 cUserDS = 0x23;
+}
+
 extern "C" {
 
 void set_kernel_stack(u32int stack);

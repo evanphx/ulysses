@@ -10,6 +10,8 @@
 #include "task.hpp"
 #include "cpu.hpp"
 
+#include "descriptor_tables.hpp"
+
 void sys_kprint(const char* p) {
   console.printf("%d: %s", scheduler.getpid(), p);
 }
@@ -24,9 +26,15 @@ void sys_exec(Registers* regs) {
     return;
   }
 
-  u32 loc = elf::load_node(test);
+  u32 new_esp;
+  u32 loc = elf::load_node(test, &new_esp);
 
   regs->eip = loc;
+  regs->ds = segments::cUserDS;
+  regs->ss = segments::cUserDS;
+  regs->cs = segments::cUserCS;
+  regs->useresp = new_esp;
+
   return;
 }
 

@@ -283,6 +283,36 @@ int Scheduler::fork() {
   }
 }
 
+int Scheduler::spawn_thread(void (*func)()) {
+  // We are modifying kernel structures, and so cannot be interrupted.
+  int st = cpu::disable_interrupts();
+
+  // Clone the address space.
+  x86::PageDirectory* directory = vmem.clone_current();
+
+  // Create a new process.
+  Task* new_task = new(kheap) Task(next_pid++);
+  new_task->directory = directory;
+  new_task->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
+
+  ready_queue.append(new_task);
+
+  if(save_registers(&new_task->regs) != &second_return) {
+    new_task->regs.eip = (u32)func;
+    new_task->regs.esp = new_task->kernel_stack + KERNEL_STACK_SIZE;
+
+    // All finished: Reenable interrupts.
+    cpu::restore_interrupts(st);
+
+    // And by convention return the PID of the child.
+    return new_task->id;
+  } else {
+    // We are the child - by convention return 0.
+    return 0;
+  }
+
+}
+
 int Scheduler::getpid() {
   return current->id;
 }

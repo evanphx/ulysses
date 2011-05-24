@@ -9,6 +9,10 @@ namespace cpu {
   static const unsigned int cPageMask = ~0xfff;
   static const unsigned int cMaxAddress = 0xFFFFFFFF;
 
+  static inline u32 page_align(u32 addr) {
+    return (addr + cPageSize - 1) & cPageMask;
+  }
+
   static inline int enable_interrupts() {
     asm volatile("sti");
     return 1;

@@ -50,11 +50,11 @@ static void show_cpuid() {
   console.write("\n");
 }
 
-/* static inline void rdtsc(dword *upper, dword *lower) { */
-  /* asm volatile("rdtsc\n" : "=a"(*lower), "=d"(*upper)); */
-/* } */
+void run_init() {
+  syscall_exec("test");
+}
 
-int kmain(struct multiboot *mboot_ptr, u32 initial_stack) {
+int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
   // Initialise all the ISRs and segmentation
   init_descriptor_tables();
   // Initialise the screen (by clearing it)
@@ -77,6 +77,10 @@ int kmain(struct multiboot *mboot_ptr, u32 initial_stack) {
     mem_total = 0x1000000;
   }
 
+  u32 kernel_size = kend - kstart;
+
+  console.printf("Kernel %x-%x : %d\n", kstart, kend, kernel_size);
+
   // Initialise the PIT to 100Hz
   cpu::enable_interrupts();
 
@@ -87,40 +91,22 @@ int kmain(struct multiboot *mboot_ptr, u32 initial_stack) {
   // Find the location of our initial ramdisk.
   ASSERT(mboot_ptr->mods_count > 0);
   initrd_location = *((u32*)mboot_ptr->mods_addr);
+  initrd_location += KERNEL_VIRTUAL_BASE;
+
   u32 initrd_end = *(u32*)(mboot_ptr->mods_addr+4);
+  initrd_end += KERNEL_VIRTUAL_BASE;
+
   // Don't trample our module with placement accesses, please!
   placement_address = initrd_end;
 
   console.printf("initrd: 0x%x - 0x%x\n", initrd_location, initrd_end-1);
 
   // Start paging.
-  vmem.init(mem_total);
+  vmem.init(mem_total, kstart, kend, initrd_end);
 
   // Start multitasking.
   scheduler.init();
 
-  // Setup a new stack and jump to it.
-
-  // Allocate some space for the new stack.
-  u32 sp = 0xE0000000;
-  u32 size = cpu::cPageSize * 2;
-
-  for(u32 i = sp; i >= sp-size; i -= cpu::cPageSize) {
-    vmem.alloc_kernel_frame(vmem.get_current_page(i, 1), true);
-  }
-
-  cpu::flush_tbl();
-
-  asm volatile(
-    "mov %0, %%esp\n"
-    "mov %0, %%ebp\n"
-    "jmp kmain2\n"
-  : : "r" (sp));
-
-  return 0;
-}
-
-void kmain2() {
   // Initialise the initial ramdisk, and set it as the filesystem root.
   fs_root = initrd::fs.init(initrd_location);
 
@@ -139,30 +125,18 @@ void kmain2() {
 
   // block::registry.print();
 
-  if(syscall_fork() == 0) {
-    /* console.write("Switching to user mode.\n"); */
-    scheduler.switch_to_user_mode();
+  scheduler.spawn_thread(run_init);
 
-    syscall_exec("test");
-  } else {
-    // The idle task code. Reschedule forever and let
-    // the cpu sleep between interrupts.
-    for(;;) {
-      scheduler.cleanup();
-      scheduler.switch_task();
-      cpu::enable_interrupts();
-      cpu::halt();
-    }
+  // The idle task code. Reschedule forever and let
+  // the cpu sleep between interrupts.
+  for(;;) {
+    scheduler.cleanup();
+    scheduler.switch_task();
+    cpu::enable_interrupts();
+    cpu::halt();
   }
 
-  /* int pid = syscall_getpid(); */
-  /* syscall_monitor_write("hello from a task\n"); */
-  /* syscall_monitor_write("hello from pid: "); */
-  /* syscall_monitor_write_dec(pid); */
-  /* syscall_monitor_write("\n"); */
-  // syscall_pause();
-
-  /* syscall_monitor_write("done!\n"); */
+  return 0;
 }
 
 }

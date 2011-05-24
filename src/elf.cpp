@@ -32,7 +32,7 @@ namespace elf {
     return (ProgramHeader*)buffer;
   }
 
-  u32 load_node(fs::Node* node) {
+  u32 load_node(fs::Node* node, u32* new_esp) {
     if(node->length < sizeof(Header)) {
       console.printf("Invalid elf header.\n");
       return 0;
@@ -63,8 +63,14 @@ namespace elf {
       }
 
       kfree(first_ph);
-
     }
+
+    u32 stack_fin = KERNEL_VIRTUAL_BASE - cpu::cPageSize;
+
+    scheduler.current->add_mmap(0, 0, 0, stack_fin, cpu::cPageSize,
+                                MemoryMapping::eAll);
+
+    *new_esp = KERNEL_VIRTUAL_BASE - 1;
 
     return hdr->e_entry;
   }

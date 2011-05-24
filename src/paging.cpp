@@ -121,7 +121,7 @@ public:
   }
 };
 
-void VirtualMemory::init(u32 total_memory) {
+void VirtualMemory::init(u32 total_memory, u32 kstart, u32 kend, u32 mem_end) {
   kernel_directory = 0;
   current_directory = 0;
 
@@ -136,36 +136,30 @@ void VirtualMemory::init(u32 total_memory) {
   // Let's make a page directory.
   kernel_directory = (x86::PageDirectory*)kmalloc_a(sizeof(x86::PageDirectory));
   memset((u8int*)kernel_directory, 0, sizeof(x86::PageDirectory));
-  kernel_directory->physicalAddr = (u32)kernel_directory->tablesPhysical;
+  kernel_directory->physicalAddr = (u32)kernel_directory->tablesPhysical - KERNEL_VIRTUAL_BASE;
 
-  // Map some pages in the kernel heap area.
-  // Here we call get_page but not alloc_frame. This causes page_table's 
-  // to be created where necessary. We can't allocate frames yet because they
-  // they need to be identity mapped first below, and yet we can't increase
-  // placement_address between identity mapping and enabling the heap!
-  for(u32 i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += cpu::cPageSize) {
-    get_page(i, 1, kernel_directory);
+  // Ok, first off, boot.s loaded a simple page directory that mapped
+  // the first 4M physical address up to KERNEL_VIRTUAL_BASE;
+  //
+  // So lets go ahead and keep that and add that to the map first.
+  //
+  // the memory is already in use (it holds the kernel, thats how we got here)
+  // and is loaded in from frame 0 up.
+  //
+  // Therefore alloc_user_frame MUST allocation linearly from 0 upward
+  // otherwise our page table won't point to the existing locations.
+  u32 page = 0;
+
+  u32 initial_heap_end = mem_end + KHEAP_INITIAL_SIZE;
+
+  for(page = KERNEL_VIRTUAL_BASE;
+      page < initial_heap_end;
+      page += cpu::cPageSize)
+  {
+    alloc_user_frame(get_page(page, 1, kernel_directory));
   }
 
-  // We need to identity map (phys addr = virt addr) from
-  // 0x0 to the end of used memory, so we can access this
-  // transparently, as if paging wasn't enabled.
-  // NOTE that we use a while loop here deliberately.
-  // inside the loop body we actually change placement_address
-  // by calling kmalloc(). A while loop causes this to be
-  // computed on-the-fly rather than once at the start.
-  // Allocate a lil' bit extra so the kernel heap can be
-  // initialised properly.
-
-  for(u32 i = 0; i < placement_address + cpu::cPageSize; i += cpu::cPageSize) {
-    // Kernel code is readable but not writeable from userspace.
-    alloc_user_frame(get_page(i, 1, kernel_directory));
-  }
-
-  // Now allocate those pages we mapped earlier.
-  for(u32 i = KHEAP_START; i < KHEAP_START+KHEAP_INITIAL_SIZE; i += cpu::cPageSize) {
-    alloc_user_frame(get_page(i, 1, kernel_directory));
-  }
+  ASSERT(placement_address < initial_heap_end);
 
   static PageFault page_fault;
 
@@ -176,7 +170,9 @@ void VirtualMemory::init(u32 total_memory) {
   switch_page_directory(kernel_directory);
 
   // Initialise the kernel heap.
-  kheap = Heap::create(KHEAP_START, KHEAP_START+KHEAP_INITIAL_SIZE, 0xCFFFF000, 0, 0);
+  kheap = Heap::create(placement_address,
+                       cpu::page_align(initial_heap_end),
+                       0xCFFFF000, 0, 0);
 
   current_directory = clone_directory(kernel_directory);
   switch_page_directory(current_directory);

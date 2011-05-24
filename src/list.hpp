@@ -59,28 +59,32 @@ namespace sys {
 
     void append(T* elem) {
       ListNode<T>& node = elem->lists[which];
-      ListNode<T>& tn = tail_->lists[which];
 
       count_++;
 
-      tn.next = elem;
+      if(tail_) {
+        ListNode<T>& tn = tail_->lists[which];
+        tn.next = elem;
+      }
+
       node.prev = tail_;
       node.next = 0;
-
       tail_ = elem;
       if(!head_) head_ = tail_;
     }
 
     void prepend(T* elem) {
       ListNode<T>& node = elem->lists[which];
-      ListNode<T>& hn = head_->lists[which];
 
       count_++;
 
-      hn.prev = elem;
+      if(head_) {
+        ListNode<T>& hn = head_->lists[which];
+        hn.prev = elem;
+      }
+
       node.next = head_;
       node.prev = 0;
-
       head_ = elem;
       if(!tail_) tail_ = head_;
     }
@@ -186,7 +190,10 @@ namespace sys {
 
       count_++;
 
-      tail_->next = node;
+      if(tail_) {
+        tail_->next = node;
+      }
+
       node->prev = tail_;
       node->next = 0;
 
@@ -201,7 +208,10 @@ namespace sys {
 
       count_++;
 
-      head_->prev = elem;
+      if(head_) {
+        head_->prev = elem;
+      }
+
       node->next = head_;
       node->prev = 0;
 
