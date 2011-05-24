@@ -104,9 +104,11 @@ void Scheduler::init() {
   waiting_queue.init();
 
   // Initialise the first task (kernel task)
-  current = new(kheap) Task(next_pid++);
+  u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
+
+  current = new((void*)mem) Task(next_pid++);
   current->directory = vmem.current_directory;
-  current->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
+  current->kernel_stack = mem + KERNEL_STACK_SIZE;
 
   task0 = current;
 
@@ -127,7 +129,6 @@ void Scheduler::cleanup() {
 
     vmem.free_directory(task->directory);
 
-    kfree((void*)task->kernel_stack);
     kfree(task);
   }
 }
@@ -186,7 +187,7 @@ void Scheduler::switch_task() {
   vmem.current_directory = current->directory;
 
   // Change our kernel stack over.
-  set_kernel_stack(current->kernel_stack + KERNEL_STACK_SIZE);
+  set_kernel_stack(current->kernel_stack);
 
   // Copy the registers in current->regs back to the machine
   // and jump to the eip held in regs.eip.
@@ -265,9 +266,11 @@ int Scheduler::fork() {
   x86::PageDirectory* directory = vmem.clone_current();
 
   // Create a new process.
-  Task* new_task = new(kheap) Task(next_pid++);
+  u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
+
+  Task* new_task = new((void*)mem) Task(next_pid++);
   new_task->directory = directory;
-  new_task->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
+  new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
 
   ready_queue.append(new_task);
 
@@ -291,58 +294,25 @@ int Scheduler::spawn_thread(void (*func)()) {
   x86::PageDirectory* directory = vmem.clone_current();
 
   // Create a new process.
-  Task* new_task = new(kheap) Task(next_pid++);
+  u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
+
+  Task* new_task = new((void*)mem) Task(next_pid++);
   new_task->directory = directory;
-  new_task->kernel_stack = kmalloc_a(KERNEL_STACK_SIZE);
+  new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
 
   ready_queue.append(new_task);
 
-  if(save_registers(&new_task->regs) != &second_return) {
-    new_task->regs.eip = (u32)func;
-    new_task->regs.esp = new_task->kernel_stack + KERNEL_STACK_SIZE;
+  save_registers(&new_task->regs);
+  new_task->regs.eip = (u32)func;
+  new_task->regs.esp = new_task->kernel_stack;
 
-    // All finished: Reenable interrupts.
-    cpu::restore_interrupts(st);
+  // All finished: Reenable interrupts.
+  cpu::restore_interrupts(st);
 
-    // And by convention return the PID of the child.
-    return new_task->id;
-  } else {
-    // We are the child - by convention return 0.
-    return 0;
-  }
-
+  // And by convention return the PID of the child.
+  return new_task->id;
 }
 
 int Scheduler::getpid() {
   return current->id;
-}
-
-void Scheduler::switch_to_user_mode() {
-  // Set up our kernel stack.
-  set_kernel_stack(current->kernel_stack + KERNEL_STACK_SIZE);
-
-  // Set up a stack structure for switching to user mode.
-  asm volatile("  \
-      cli; \
-      mov $0x23, %ax; \
-      mov %ax, %ds; \
-      mov %ax, %es; \
-      mov %ax, %fs; \
-      mov %ax, %gs; \
-      \
-      \
-      mov %esp, %eax; \
-      pushl $0x23; \
-      pushl %esp; \
-      pushf; \
-      pop %eax; \
-      mov $0x200, %ecx; \
-      or %ecx, %eax; \
-      push %eax; \
-      pushl $0x1B; \
-      push $1f; \
-      iret; \
-      1: \
-      "); 
-
 }

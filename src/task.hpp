@@ -11,7 +11,7 @@
 #include "list.hpp"
 #include "fs.hpp"
 
-#define KERNEL_STACK_SIZE 2048       // Use a 2kb kernel stack.
+#define KERNEL_STACK_SIZE 4096       // Use a 4kb (one page) kernel stack.
 
 // This structure defines a 'task' - a process.
 struct Task {
@@ -119,7 +119,6 @@ struct Scheduler {
   int getpid();
   int wait_any(int* status);
 
-  void switch_to_user_mode();
   void on_tick();
 
   void* heap_start();
