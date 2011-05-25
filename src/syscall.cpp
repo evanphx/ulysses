@@ -18,24 +18,27 @@ void sys_kprint(const char* p) {
 
 void sys_exec(Registers* regs) {
   const char* path = (const char*)regs->ebx;
+  const char** argp = (const char**)regs->ecx;
+  const char** envp = (const char**)regs->edx;
 
-  fs::Node* test = fs_root->finddir(path, strlen(path));
+  elf::Request req(path, argp, envp);
 
-  if(!test) {
+  if(!req.load_file()) {
     console.printf("Exec of %s failed, not found.\n", path);
     return;
   }
 
-  u32 new_esp;
-  u32 loc = elf::load_node(test, &new_esp);
+  if(!elf::load_node(req)) {
+    regs->eax = -1;
+    return;
+  }
 
-  regs->eip = loc;
+  regs->eax = 0;
+  regs->eip = req.target_ip;
   regs->ds = segments::cUserDS;
   regs->ss = segments::cUserDS;
   regs->cs = segments::cUserCS;
-  regs->useresp = new_esp;
-
-  return;
+  regs->useresp = req.new_esp;
 }
 
 int sys_fork() {
@@ -125,7 +128,7 @@ DEFN_SYSCALL3(seek, 10, int, int, int);
 DEFN_SYSCALL3(write, 11, int, int, char*);
 DEFN_SYSCALL1(sbrk, 12, int);
 
-DEFN_SYSCALL1(exec, raw_syscall_base + 0, const char*);
+DEFN_SYSCALL3(exec, raw_syscall_base + 0, const char*, const char**, const char**);
 
 static void* syscalls[] = {
     (void*)&sys_kprint,

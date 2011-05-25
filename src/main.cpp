@@ -50,8 +50,11 @@ static void show_cpuid() {
   console.write("\n");
 }
 
+const char* init_argv[] = { "/bin/init", "start", 0 };
+const char* init_envp[] = { "TERM=ulysses", "OS=ulysses", 0 };
+
 void run_init() {
-  syscall_exec("test");
+  syscall_exec("test", init_argv, init_envp);
 }
 
 int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {

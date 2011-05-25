@@ -172,7 +172,27 @@ namespace elf {
     u32        sh_entsize;
   };
 
-  u32 load_node(fs::Node* node, u32* new_esp);
+  struct Request {
+    const char* path;
+    const char** argv;
+    const char** env;
+    fs::Node* node;
+    u32 new_esp;
+    u32 target_ip;
+
+    Request(const char* p, const char** a, const char** e)
+      : path(p)
+      , argv(a)
+      , env(e)
+      , node(0)
+      , new_esp(0)
+      , target_ip(0)
+    {}
+
+    bool load_file();
+  };
+
+  bool load_node(Request& req);
 
 }
 

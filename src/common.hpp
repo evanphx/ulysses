@@ -64,4 +64,10 @@ void restore_interrupts(int status);
 
 
 }
+
+template <typename T>
+  static inline T align(T val, int count) {
+    return (val + count - 1) & ~(count - 1);
+  }
+
 #endif // COMMON_H
