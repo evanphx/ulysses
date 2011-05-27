@@ -161,10 +161,10 @@ namespace elf {
 
     *((u8***)arg_start) = env_tbl;
 
-    // u32 stack_fin = KERNEL_VIRTUAL_BASE - (pages * cpu::cPageSize);
+    u32 stack_fin = KERNEL_VIRTUAL_BASE - USER_STACK_SIZE;
 
-    // scheduler.current->add_mmap(0, 0, 0, stack_fin, cpu::cPageSize,
-                                // MemoryMapping::eAll);
+    scheduler.current->add_mmap(0, 0, 0, stack_fin, USER_STACK_SIZE,
+                                MemoryMapping::eAll);
 
     req.target_ip = hdr->e_entry;
 
@@ -172,8 +172,8 @@ namespace elf {
   }
 
   bool Request::load_file() {
-   node = fs_root->finddir(path, strlen(path));
-   if(!node) return false;
-   return true;
+    node = fs_root->finddir(path, strlen(path));
+    if(!node) return false;
+    return true;
   }
 }

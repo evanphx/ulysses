@@ -10,6 +10,7 @@
 #include "cpu.hpp"
 
 #define KERNEL_VIRTUAL_BASE 0xC0000000
+#define USER_STACK_SIZE 0x800000
 
 namespace x86 {
   struct Page {
