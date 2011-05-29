@@ -17,9 +17,12 @@
 #define FS_SYMLINK     0x06
 #define FS_MOUNTPOINT  0x08 // Is the file an active mountpoint?
 
+#define MAXNAMLEN 255
+
 struct dirent {
-  char name[128]; // Filename.
-  u32 ino;     // Inode number. Required by POSIX.
+  int d_ino;
+  unsigned short int d_reclen;
+  char d_name[];
 };
 
 namespace fs {
@@ -35,12 +38,26 @@ namespace fs {
 
     Node* delegate; // Used by mountpoints and symlinks.
 
+    Node()
+      : mask(0)
+      , uid(0)
+      , gid(0)
+      , flags(0)
+      , inode(0)
+      , length(0)
+      , delegate(0)
+    {
+      name[0] = 0;
+    }
+
     virtual u32 read(u32 offset, u32 size, u8* buffer) { return 0; }
     virtual u32 write(u32 offset, u32 size, u8* buffer) { return 0; }
     virtual void open() { return; }
     virtual void close() { return; }
     virtual struct dirent* readdir(u32 index) { return 0; }
     virtual Node* finddir(const char* name, int len) { return 0; }
+    virtual Node* create_file(sys::String& str) { return 0; }
+    virtual int get_entries(int offset, void* dp, int count) { return -1; }
   };
 
   // An open file used by a process.
@@ -53,6 +70,7 @@ namespace fs {
     s32 read(u8* buffer, u32 size);
     s32 write(u8* buffer, u32 size);
     void seek(int pos, int whence);
+    int get_entries(void* dp, int count);
   };
 
   class Registry;

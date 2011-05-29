@@ -35,6 +35,7 @@ namespace initrd {
     Node* root;
     Node* dev;
     Node* data;
+    Node* tmp;
     Node* root_nodes; // List of file nodes.
     u32 nroot_nodes; // Number of file nodes.
   

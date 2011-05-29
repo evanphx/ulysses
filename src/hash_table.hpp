@@ -164,6 +164,46 @@ namespace sys {
       return false;
     }
 
+    class Iterator {
+      HashTable& tbl_;
+      u32 bin_;
+      Entry* entry_;
+
+    public:
+      Iterator(HashTable& tbl)
+        : tbl_(tbl)
+        , bin_(0)
+        , entry_(0)
+      {}
+
+      Entry* next() {
+        if(entry_) {
+          if(entry_->next) {
+            entry_ = entry_->next;
+            return entry_;
+          } else {
+            bin_++;
+          }
+        }
+
+        while(bin_ < tbl_.bins_) {
+          Entry* e = tbl_.values_[bin_];
+          if(e) {
+            entry_ = e;
+            return e;
+          } else {
+            bin_++;
+          }
+        }
+
+        return 0;
+      }
+    };
+
+    Iterator iterator() {
+      return Iterator(*this);
+    }
+
   };
 
   template <typename K>

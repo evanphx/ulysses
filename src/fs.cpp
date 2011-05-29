@@ -44,6 +44,12 @@ namespace fs {
     }
   }
 
+  int File::get_entries(void* dp, int count) {
+    int entries = node_->get_entries(offset_, dp, count);
+    offset_ += entries;
+    return entries;
+  }
+
   Node* lookup(const char* name, int len, fs::Node* dir) {
     int sub_len = 0;
     while(sub_len < len) {
@@ -56,8 +62,17 @@ namespace fs {
     fs::Node* child = dir->finddir(name, sub_len);
 
     if(child) {
-      if(sub_len == len) return child;
+      if(sub_len == len) {
+        if(child->delegate) return child->delegate;
+        return child;
+      }
+
       return lookup(name + (sub_len + 1), len - sub_len - 1, child);
+    } else {
+      if(sub_len == len) {
+        sys::String str(name, sub_len, false);
+        return dir->create_file(str);
+      }
     }
 
     return 0;
@@ -114,15 +129,13 @@ namespace fs {
   Registry registry;
 
   void Registry::add_fs(RegisteredFS* fs) {
-    if(!head_) {
-      head_ = fs;
-    } else {
-      head_->next_ = fs;
-    }
+    fs->next_ = head_;
+    head_ = fs;
   }
 
   RegisteredFS* Registry::find(const char* name) {
     RegisteredFS* node = head_;
+
     while(node) {
       if(node->name() == name) return node;
       node = node->next_;

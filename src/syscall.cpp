@@ -112,6 +112,14 @@ u32 sys_sbrk(int bytes) {
   return addr;
 }
 
+int sys_getdents(int fd, void* dp, int count) {
+  if(fs::File* file = scheduler.current->get_file(fd)) {
+    return file->get_entries(dp, count);
+  }
+
+  return -1;
+}
+
 const static u32 raw_syscall_base = 1024;
 
 DEFN_SYSCALL1(kprint, 0, const char*);
@@ -127,6 +135,7 @@ DEFN_SYSCALL3(mount, 9, char*, char*, char*);
 DEFN_SYSCALL3(seek, 10, int, int, int);
 DEFN_SYSCALL3(write, 11, int, int, char*);
 DEFN_SYSCALL1(sbrk, 12, int);
+DEFN_SYSCALL3(getdents, 13, int, void*, int);
 
 DEFN_SYSCALL3(exec, raw_syscall_base + 0, const char*, const char**, const char**);
 
@@ -143,14 +152,15 @@ static void* syscalls[] = {
     (void*)&sys_mount,
     (void*)&sys_seek,
     (void*)&sys_write,
-    (void*)&sys_sbrk
+    (void*)&sys_sbrk,
+    (void*)&sys_getdents
 };
 
 static void* raw_syscalls[] = {
     (void*)&sys_exec
 };
 
-const static u32 num_syscalls = 13;
+const static u32 num_syscalls = 14;
 const static u32 num_raw_syscalls = 1;
 
 class SyscallDispatcher : public interrupt::Handler {

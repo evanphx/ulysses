@@ -7,7 +7,6 @@
 #include "paging.hpp"
 #include "multiboot.hpp"
 #include "fs.hpp"
-#include "initrd.hpp"
 #include "task.hpp"
 #include "syscall.hpp"
 #include "keyboard.hpp"
@@ -15,8 +14,10 @@
 #include "rtc.hpp"
 #include "elf.hpp"
 #include "block.hpp"
+#include "fs/initrd.hpp"
 #include "fs/devfs.hpp"
 #include "fs/ext2.hpp"
+#include "fs/tmpfs.hpp"
 #include "character/console.hpp"
 
 #include "cpu.hpp"
@@ -120,6 +121,7 @@ int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
   fs::registry.init();
   devfs::main.init();
   ext2::init();
+  tmpfs::init();
 
   block::registry.init();
   console_driver::init();

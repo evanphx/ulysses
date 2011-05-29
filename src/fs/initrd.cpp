@@ -23,17 +23,17 @@ namespace initrd {
 
   struct dirent* Node::readdir(u32 index) {
     if(this == fs->root && index == 0) {
-      strcpy(dirent.name, "dev");
-      dirent.name[3] = 0;
-      dirent.ino = 0;
+      strcpy(dirent.d_name, "dev");
+      dirent.d_name[3] = 0;
+      dirent.d_ino = 0;
       return &dirent;
     }
 
     if(index-1 >= fs->nroot_nodes) return 0;
 
-    strcpy(dirent.name, fs->root_nodes[index-1].name);
-    dirent.name[strlen(fs->root_nodes[index-1].name)] = 0;
-    dirent.ino = fs->root_nodes[index-1].inode;
+    strcpy(dirent.d_name, fs->root_nodes[index-1].name);
+    dirent.d_name[strlen(fs->root_nodes[index-1].name)] = 0;
+    dirent.d_ino = fs->root_nodes[index-1].inode;
     return &dirent;
   }
 
@@ -44,6 +44,10 @@ namespace initrd {
 
     if(this == fs->root && len == 4 && !strncmp(name, "data", len)) {
       return fs->data;
+    }
+
+    if(this == fs->root && len == 3 && !strncmp(name, "tmp", len)) {
+      return fs->tmp;
     }
 
     for(u32 i = 0; i < fs->nroot_nodes; i++) {
@@ -86,6 +90,14 @@ namespace initrd {
     data->flags = FS_DIRECTORY;
     data->delegate = 0;
     data->fs = this;
+
+    tmp = knew<initrd::Node>();
+    strcpy(tmp->name, "tmp");
+    tmp->mask = tmp->uid = tmp->gid =
+      tmp->inode = tmp->length = 0;
+    tmp->flags = FS_DIRECTORY;
+    tmp->delegate = 0;
+    tmp->fs = this;
 
     nroot_nodes = initrd_header->nfiles;
     root_nodes = knew_array<initrd::Node>(nroot_nodes);
