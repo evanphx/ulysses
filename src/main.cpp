@@ -24,32 +24,7 @@
 
 extern "C" {
 
-extern u32 placement_address;
 u32 initrd_location;
-
-void kmain2();
-
-static void show_cpuid() {
-  u32 ebx, edx, ecx;
-  u32 code = 0;
-
-  asm volatile("cpuid" : "=b"(ebx),"=d"(edx),"=c"(ecx) : "a"(code));
-
-  console.write("CPUID: ");
-  console.put((ebx & 0x000000ff) >> 0);
-  console.put((ebx & 0x0000ff00) >> 8);
-  console.put((ebx & 0x00ff0000) >> 16);
-  console.put((ebx & 0xff000000) >> 24);
-  console.put((edx & 0x000000ff) >> 0);
-  console.put((edx & 0x0000ff00) >> 8);
-  console.put((edx & 0x00ff0000) >> 16);
-  console.put((edx & 0xff000000) >> 24);
-  console.put((ecx & 0x000000ff) >> 0);
-  console.put((ecx & 0x0000ff00) >> 8);
-  console.put((ecx & 0x00ff0000) >> 16);
-  console.put((ecx & 0xff000000) >> 24);
-  console.write("\n");
-}
 
 const char* init_argv[] = { "/bin/init", "start", 0 };
 const char* init_envp[] = { "TERM=ulysses", "OS=ulysses", 0 };
@@ -90,7 +65,7 @@ int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
 
   timer.init(SLICE_HZ);
 
-  show_cpuid();
+  cpu::print_cpuid();
 
   // Find the location of our initial ramdisk.
   ASSERT(mboot_ptr->mods_count > 0);
@@ -99,9 +74,6 @@ int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
 
   u32 initrd_end = *(u32*)(mboot_ptr->mods_addr+4);
   initrd_end += KERNEL_VIRTUAL_BASE;
-
-  // Don't trample our module with placement accesses, please!
-  placement_address = initrd_end;
 
   console.printf("initrd: 0x%x - 0x%x\n", initrd_location, initrd_end-1);
 

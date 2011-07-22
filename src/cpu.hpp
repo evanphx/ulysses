@@ -80,6 +80,7 @@ namespace cpu {
     set_page_directory(page_directory());
   }
 
+  void print_cpuid();
 }
 
 #endif

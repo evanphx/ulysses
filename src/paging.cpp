@@ -9,11 +9,6 @@
 
 VirtualMemory vmem = {0, 0, 0, 0};
 
-extern "C" {
-  // Defined in kheap.c
-  extern u32 placement_address;
-}
-
 // Function to allocate a frame.
 void VirtualMemory::alloc_frame(x86::Page* page, bool is_kernel, bool is_writeable) {
   if(page->frame != 0) return;
@@ -121,20 +116,30 @@ public:
   }
 };
 
+static inline u32 bump(u32* point, u32 size) {
+  u32 addr = *point;
+  *point += size;
+  return addr;
+}
+
 void VirtualMemory::init(u32 total_memory, u32 kstart, u32 kend, u32 mem_end) {
   kernel_directory = 0;
   current_directory = 0;
+
+  u32 allocp = mem_end;
 
   // The size of physical memory. For the moment we 
   // assume it is 16MB big.
   u32 mem_end_page = total_memory;
 
   nframes = mem_end_page / cpu::cPageSize;
-  frames = (u32*)kmalloc(INDEX_FROM_BIT(nframes));
+  frames = (u32*)bump(&allocp, INDEX_FROM_BIT(nframes));
   memset((u8int*)frames, 0, INDEX_FROM_BIT(nframes));
 
   // Let's make a page directory.
-  kernel_directory = (x86::PageDirectory*)kmalloc_a(sizeof(x86::PageDirectory));
+  allocp = cpu::page_align(allocp);
+
+  kernel_directory = (x86::PageDirectory*)bump(&allocp, sizeof(x86::PageDirectory));
   memset((u8int*)kernel_directory, 0, sizeof(x86::PageDirectory));
   kernel_directory->physicalAddr = (u32)kernel_directory->tablesPhysical - KERNEL_VIRTUAL_BASE;
 
@@ -156,10 +161,10 @@ void VirtualMemory::init(u32 total_memory, u32 kstart, u32 kend, u32 mem_end) {
       page < initial_heap_end;
       page += cpu::cPageSize)
   {
-    alloc_user_frame(get_page(page, 1, kernel_directory));
+    alloc_user_frame(get_page(&allocp, page, 1, kernel_directory));
   }
 
-  ASSERT(placement_address < initial_heap_end);
+  ASSERT(allocp < initial_heap_end);
 
   static PageFault page_fault;
 
@@ -170,7 +175,7 @@ void VirtualMemory::init(u32 total_memory, u32 kstart, u32 kend, u32 mem_end) {
   switch_page_directory(kernel_directory);
 
   // Initialise the kernel heap.
-  kheap = Heap::create(placement_address,
+  kheap = Heap::create(allocp,
                        cpu::page_align(initial_heap_end),
                        0xCFFFF000, 0, 0);
 
@@ -184,6 +189,36 @@ void VirtualMemory::switch_page_directory(x86::PageDirectory* dir) {
   cpu::set_page_directory(dir->physicalAddr);
   cpu::enable_paging();
 }
+
+x86::Page* VirtualMemory::get_page(u32* allocp, u32 address, int make,
+                                   x86::PageDirectory* dir)
+{
+  // Turn the address into an index.
+  address /= cpu::cPageSize;
+  // Find the page table containing this address.
+  u32 table_idx = address / 1024;
+
+  if(dir->tables[table_idx]) { // If this table is already assigned
+    return &dir->tables[table_idx]->pages[address%1024];
+  } else if(make) {
+    *allocp = cpu::page_align(*allocp);
+
+    u32 addr = *allocp;
+
+    u32 tmp = addr - KERNEL_VIRTUAL_BASE;
+
+    *allocp += sizeof(x86::PageTable);
+
+    dir->tables[table_idx] = (x86::PageTable*)addr;
+
+    memset((u8int*)dir->tables[table_idx], 0, cpu::cPageSize);
+    dir->tablesPhysical[table_idx] = tmp | 0x7; // PRESENT, RW, US.
+    return &dir->tables[table_idx]->pages[address%1024];
+  } else {
+    return 0;
+  }
+}
+
 
 x86::Page* VirtualMemory::get_page(u32 address, int make, x86::PageDirectory* dir) {
   // Turn the address into an index.

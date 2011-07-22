@@ -29,35 +29,20 @@ Allocation Heap::allocate(u32 size, int align=0) {
 
 extern "C" {
 
-u32 placement_address;
-
 u32 kmalloc_int(u32 sz, int align, u32 *phys) {
-  if(kheap != 0) {
-    if(align && sz < 0x1000) {
-      sz = 0x1000;
-    }
+  ASSERT(kheap);
 
-    void *addr = kheap->alloc(sz, (u8)align);
-    if(phys != 0) {
-      x86::Page* page = vmem.get_kernel_page((u32)addr, 0);
-      *phys = page->frame*0x1000 + ((u32)addr&0xFFF);
-    }
-
-    return (u32)addr;
-  } else {
-    if(align == 1 && (placement_address & 0xFFFFF000)) {
-      // Align the placement address;
-      placement_address &= 0xFFFFF000;
-      placement_address += 0x1000;
-    }
-
-    if (phys) {
-      *phys = placement_address - KERNEL_VIRTUAL_BASE;
-    }
-    u32 tmp = placement_address;
-    placement_address += sz;
-    return tmp;
+  if(align && sz < 0x1000) {
+    sz = 0x1000;
   }
+
+  void *addr = kheap->alloc(sz, (u8)align);
+  if(phys != 0) {
+    x86::Page* page = vmem.get_kernel_page((u32)addr, 0);
+    *phys = page->frame*0x1000 + ((u32)addr&0xFFF);
+  }
+
+  return (u32)addr;
 }
 
 void kfree(void *p) {
