@@ -22,10 +22,6 @@
 
 #include "cpu.hpp"
 
-extern "C" {
-
-u32 initrd_location;
-
 const char* init_argv[] = { "/bin/init", "start", 0 };
 const char* init_envp[] = { "TERM=ulysses", "OS=ulysses", 0 };
 
@@ -33,7 +29,7 @@ void run_init() {
   syscall_exec("test", init_argv, init_envp);
 }
 
-int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
+extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
   // Initialise all the ISRs and segmentation
   init_descriptor_tables();
   // Initialise the screen (by clearing it)
@@ -69,7 +65,7 @@ int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
 
   // Find the location of our initial ramdisk.
   ASSERT(mboot_ptr->mods_count > 0);
-  initrd_location = *((u32*)mboot_ptr->mods_addr);
+  u32 initrd_location = *((u32*)mboot_ptr->mods_addr);
   initrd_location += KERNEL_VIRTUAL_BASE;
 
   u32 initrd_end = *(u32*)(mboot_ptr->mods_addr+4);
@@ -114,6 +110,4 @@ int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
   }
 
   return 0;
-}
-
 }
