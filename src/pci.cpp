@@ -1,6 +1,10 @@
 #include "monitor.hpp"
 #include "pci.hpp"
+
+#ifdef INCLUDE_PCI_DB
 #include "pci_db.hpp"
+#endif
+
 #include "rtl8139.hpp"
 #include "kheap.hpp"
 #include "ata.hpp"
@@ -97,20 +101,24 @@ namespace pci {
   void Device::show() {
     const char* vendor = "unknown";
 
+#ifdef INCLUDE_PCI_DB
     for(u32 i = 0; i < PCI_VENTABLE_LEN; i++) {
       if(PciVenTable[i].VenId == vendor_id()) {
         vendor = PciVenTable[i].VenShort;
       }
     }
+#endif
 
     const char* device = "unknown";
 
+#ifdef INCLUDE_PCI_DB
     for(u32 i = 0; i < PCI_DEVTABLE_LEN; i++) {
       if(PciDevTable[i].VenId == vendor_id() &&
           PciDevTable[i].DevId == device_id()) {
         device = PciDevTable[i].Chip;
       }
     }
+#endif
 
     console.printf("%04x:%04x:%04x   %s, %s, %s\n", 
                    vendor_id(), device_id(), klass_,

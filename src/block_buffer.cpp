@@ -5,7 +5,7 @@
 
 #include "kheap.hpp"
 #include "cpu.hpp"
-#include "task.hpp"
+#include "scheduler.hpp"
 
 namespace block {
   Buffer* Buffer::for_size(Device* dev, u32 num_bytes) {

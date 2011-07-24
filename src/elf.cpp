@@ -4,7 +4,8 @@
 #include "fs.hpp"
 #include "paging.hpp"
 #include "cpu.hpp"
-#include "task.hpp"
+#include "thread.hpp"
+#include "scheduler.hpp"
 
 namespace elf {
 
@@ -73,7 +74,7 @@ namespace elf {
 
       for(int i = 0; i < hdr->e_phnum; i++) {
         if(ph->load_p()) {
-          scheduler.current->add_mmap(req.node, ph->p_offset, ph->p_filesz,
+          scheduler.process()->add_mmap(req.node, ph->p_offset, ph->p_filesz,
                                       ph->p_vaddr, ph->p_memsz,
                                       ph->mmap_flags());
         }
@@ -163,7 +164,7 @@ namespace elf {
 
     u32 stack_fin = KERNEL_VIRTUAL_BASE - USER_STACK_SIZE;
 
-    scheduler.current->add_mmap(0, 0, 0, stack_fin, USER_STACK_SIZE,
+    scheduler.process()->add_mmap(0, 0, 0, stack_fin, USER_STACK_SIZE,
                                 MemoryMapping::eAll);
 
     req.target_ip = hdr->e_entry;

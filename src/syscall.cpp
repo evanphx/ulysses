@@ -7,10 +7,14 @@
 #include "monitor.hpp"
 #include "elf.hpp"
 
-#include "task.hpp"
+#include "thread.hpp"
+#include "scheduler.hpp"
 #include "cpu.hpp"
 
 #include "descriptor_tables.hpp"
+
+#include "ipc.hpp"
+#include "process.hpp"
 
 void sys_kprint(const char* p) {
   console.printf("%d: %s", scheduler.getpid(), p);
@@ -66,11 +70,11 @@ void sys_wait_any(int* status) {
 }
 
 int sys_open(char* name, int mode) {
-  return scheduler.current->open_file(name, mode);
+  return scheduler.process()->open_file(name, mode);
 }
 
 int sys_read(int fd, char* buffer, int size) {
-  if(fs::File* file = scheduler.current->get_file(fd)) {
+  if(fs::File* file = scheduler.process()->get_file(fd)) {
     if(size == 0) return 0;
     if(size < 0) return -1;
 
@@ -82,7 +86,7 @@ int sys_read(int fd, char* buffer, int size) {
 }
 
 int sys_write(int fd, int size, char* buffer) {
-  if(fs::File* file = scheduler.current->get_file(fd)) {
+  if(fs::File* file = scheduler.process()->get_file(fd)) {
     if(size == 0) return 0;
     if(size < 0) return -1;
 
@@ -98,7 +102,7 @@ int sys_mount(const char* path, const char* fstype, const char* dev) {
 }
 
 int sys_seek(int fd, int pos, int whence) {
-  if(fs::File* file = scheduler.current->get_file(fd)) {
+  if(fs::File* file = scheduler.process()->get_file(fd)) {
     file->seek(pos, whence);
     return 0;
   }
@@ -107,17 +111,29 @@ int sys_seek(int fd, int pos, int whence) {
 }
 
 u32 sys_sbrk(int bytes) {
-  u32 addr = scheduler.current->change_heap(bytes);
+  u32 addr = scheduler.process()->change_heap(bytes);
   console.printf("sbrk = %x\n", addr);
   return addr;
 }
 
 int sys_getdents(int fd, void* dp, int count) {
-  if(fs::File* file = scheduler.current->get_file(fd)) {
+  if(fs::File* file = scheduler.process()->get_file(fd)) {
     return file->get_entries(dp, count);
   }
 
   return -1;
+}
+
+int sys_channel_connect(int pid, int cid) {
+  return -1; // ipc::channel_connect(pid, cid);
+}
+
+int sys_channel_create() {
+  return -1; // ipc::channel_create();
+}
+
+int sys_msg_recv(int cid, void* msg, int len) {
+  return -1; // ipc::msg_recv(cid, msg, len);
 }
 
 const static u32 raw_syscall_base = 1024;
@@ -137,6 +153,11 @@ DEFN_SYSCALL3(write, 11, int, int, char*);
 DEFN_SYSCALL1(sbrk, 12, int);
 DEFN_SYSCALL3(getdents, 13, int, void*, int);
 
+DEFN_SYSCALL2(channel_connect, 14, int, int);
+DEFN_SYSCALL0(channel_create, 15);
+
+DEFN_SYSCALL3(msg_recv, 16, int, void*, int);
+
 DEFN_SYSCALL3(exec, raw_syscall_base + 0, const char*, const char**, const char**);
 
 static void* syscalls[] = {
@@ -153,14 +174,17 @@ static void* syscalls[] = {
     (void*)&sys_seek,
     (void*)&sys_write,
     (void*)&sys_sbrk,
-    (void*)&sys_getdents
+    (void*)&sys_getdents,
+    (void*)&sys_channel_connect,
+    (void*)&sys_channel_create,
+    (void*)&sys_msg_recv
 };
 
 static void* raw_syscalls[] = {
     (void*)&sys_exec
 };
 
-const static u32 num_syscalls = 14;
+const static u32 num_syscalls = 17;
 const static u32 num_raw_syscalls = 1;
 
 class SyscallDispatcher : public interrupt::Handler {

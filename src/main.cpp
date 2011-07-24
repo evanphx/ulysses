@@ -7,7 +7,6 @@
 #include "paging.hpp"
 #include "multiboot.hpp"
 #include "fs.hpp"
-#include "task.hpp"
 #include "syscall.hpp"
 #include "keyboard.hpp"
 #include "pci.hpp"
@@ -19,6 +18,7 @@
 #include "fs/ext2.hpp"
 #include "fs/tmpfs.hpp"
 #include "character/console.hpp"
+#include "scheduler.hpp"
 
 #include "cpu.hpp"
 

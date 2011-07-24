@@ -3,7 +3,7 @@
 
 #include "block_region.hpp"
 
-class Task;
+class Thread;
 
 namespace block {
   class Device;
@@ -24,7 +24,7 @@ namespace block {
     Device* device_;
 
     RegionRange range_;
-    Task* waiting_task_;
+    Thread* waiting_task_;
 
   public:
     Buffer(u16 size, u8* data, Device* dev=0)
@@ -80,7 +80,7 @@ namespace block {
       range_ = range;
     }
 
-    void set_waiting_task(Task* task) {
+    void set_waiting_task(Thread* task) {
       waiting_task_ = task;
     }
 

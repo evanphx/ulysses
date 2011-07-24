@@ -1,9 +1,4 @@
-// 
-// task.c - Implements the functionality needed to multitask.
-//          Written for JamesM's kernel development tutorials.
-//
-
-#include "task.hpp"
+#include "scheduler.hpp"
 #include "paging.hpp"
 #include "kheap.hpp"
 #include "descriptor_tables.hpp"
@@ -15,82 +10,8 @@
 
 Scheduler scheduler;
 
-Task::Task(int pid)
-  : id(pid)
-  , alarm_at(0)
-  , exit_code(0)
-  , break_mapping(0)
-{
-  for(int i = 0; i < 16; i++) {
-    fds_[i] = 0;
-  }
-}
-
-void Task::sleep_til(int secs) {
-  alarm_at = timer.ticks + timer.secs_to_ticks(secs);
-}
-
-bool Task::alarm_expired() {
-  return state == Task::eWaiting && 
-         alarm_at != 0 &&
-         alarm_at <= timer.ticks;
-}
-
-
-void Task::add_mmap(fs::Node* node, u32 offset, u32 size, u32 addr, u32 mem_size,
-                    int flags)
-{
-  MemoryMapping mapping(addr, mem_size, node, offset, size, flags);
-  mmaps.append(mapping);
-}
-
-int Task::open_file(const char* path, int mode) {
-  fs::Node* node = fs::lookup(path+1, strlen(path)-1, fs_root);
-
-  if(!node) return -1;
-
-  // block::Device* dev = block::registry.get(1);
-  // fs::Node* node = devfs::main.make_node(dev, path);
-  int fd = find_fd();
-
-  fds_[fd] = new(kheap) fs::File(node);
-
-  return fd;
-}
-
-fs::File* Task::get_file(int fd) {
-  if(fd < 0 || fd >= 16) return 0;
-  return fds_[fd];
-}
-
-MemoryMapping* Task::find_mapping(u32 addr) {
-  Task::MMapList::Iterator i = mmaps.begin();
-
-  while(i.more_p()) {
-    MemoryMapping& mmap = i.advance();
-
-    if(mmap.contains_p(addr)) return &mmap;
-  }
-
-  return 0;
-}
-
-u32 Task::change_heap(int bytes) {
-  if(!break_mapping) {
-    int flags = MemoryMapping::eAll;
-    u32 addr = 0x2000000;
-    MemoryMapping mapping(addr, bytes, 0, 0, 0, flags);
-    break_mapping = &mmaps.append(mapping);
-    return addr;
-  }
-
-  u32 ret = break_mapping->end_address();
-  break_mapping->enlarge_mem_size(bytes);
-  return ret;
-}
-
-extern "C" void* save_registers(volatile Task::SavedRegisters*);
-extern "C" void restore_registers(volatile Task::SavedRegisters*, u32);
+extern "C" void* save_registers(volatile Thread::SavedRegisters*);
+extern "C" void restore_registers(volatile Thread::SavedRegisters*, u32);
 extern "C" void second_return();
 
 extern "C" u8 initial_task;
@@ -101,20 +22,26 @@ void Scheduler::init() {
 
   next_pid = 0;
   current = 0;
+
+  processes_.init();
+
   ready_queue.init();
   cleanup_queue.init();
   waiting_queue.init();
 
-  // Initialise the first task (kernel task)
+  // Initialise the first thread (kernel thread)
   u32 mem = (u32)&initial_task;
 
-  current = new((void*)mem) Task(next_pid++);
+  Process* proc = new(kheap) Process(next_pid++);
+  processes_.append(proc);
+  
+  current = new((void*)mem) Thread(proc);
   current->directory = vmem.current_directory;
   current->kernel_stack = mem + KERNEL_STACK_SIZE;
 
-  task0 = current;
+  // processes.append(current);
 
-  ASSERT(task0->id == 0);
+  task0 = current;
 
   make_ready(current);
 
@@ -123,11 +50,12 @@ void Scheduler::init() {
 }
 
 void Scheduler::cleanup() {
-  Task::RunList::Iterator i = cleanup_queue.begin();
+  Thread::RunList::Iterator i = cleanup_queue.begin();
 
   while(i.more_p()) {
-    Task* task = i.advance();
+    Thread* task = i.advance();
     cleanup_queue.unlink(task);
+    // processes.unlink(task);
 
     vmem.free_directory(task->directory);
 
@@ -136,11 +64,11 @@ void Scheduler::cleanup() {
 }
 
 void Scheduler::on_tick() {
-  Task::RunList::Iterator i = waiting_queue.begin();
+  Thread::RunList::Iterator i = waiting_queue.begin();
 
   bool schedule = false;
   while(i.more_p()) {
-    Task* task = i.advance();
+    Thread* task = i.advance();
 
     if(task->alarm_expired()) {
       waiting_queue.unlink(task);
@@ -161,13 +89,13 @@ void Scheduler::switch_task() {
   // This routine will return twice. Once after we initially call it
   // and other time when the current task is being resumed. We detect
   // that happening by checking if the returned value is &second_return;
-  void* val = save_registers((Task::SavedRegisters*)&current->regs);
+  void* val = save_registers((Thread::SavedRegisters*)&current->regs);
 
   // Have we just switched tasks?
   if(val == &second_return) return;
 
   // Get the next task to run.
-  Task* next = current->next_runnable();
+  Thread* next = current->next_runnable();
 
   // If we fell off the end of the linked list start again at the beginning.
   if(!next) {
@@ -208,7 +136,7 @@ void Scheduler::exit(int code) {
   ready_queue.unlink(current);
 
   current->exit_code = code;
-  current->state = Task::eDead;
+  current->state = Thread::eDead;
   cleanup_queue.prepend(current);
 
   cpu::restore_interrupts(st);
@@ -245,7 +173,7 @@ void Scheduler::io_wait() {
   // We are modifying kernel structures, and so cannot be interrupted.
   cpu::disable_interrupts();
 
-  current->state = Task::eIOWait;
+  current->state = Thread::eIOWait;
 
   ASSERT(current != task0);
 
@@ -268,9 +196,12 @@ int Scheduler::fork() {
   x86::PageDirectory* directory = vmem.clone_current();
 
   // Create a new process.
+  Process* proc = new(kheap) Process(next_pid++);
+  processes_.append(proc);
+
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
-  Task* new_task = new((void*)mem) Task(next_pid++);
+  Thread* new_task = new((void*)mem) Thread(proc);
   new_task->directory = directory;
   new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
 
@@ -281,7 +212,7 @@ int Scheduler::fork() {
     cpu::restore_interrupts(st);
 
     // And by convention return the PID of the child.
-    return new_task->id;
+    return proc->pid();
   } else {
     // We are the child - by convention return 0.
     return 0;
@@ -298,7 +229,7 @@ int Scheduler::spawn_thread(void (*func)()) {
   // Create a new process.
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
-  Task* new_task = new((void*)mem) Task(next_pid++);
+  Thread* new_task = new((void*)mem) Thread(process());
   new_task->directory = directory;
   new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
 
@@ -312,9 +243,9 @@ int Scheduler::spawn_thread(void (*func)()) {
   cpu::restore_interrupts(st);
 
   // And by convention return the PID of the child.
-  return new_task->id;
+  return process()->pid();
 }
 
 int Scheduler::getpid() {
-  return current->id;
+  return process()->pid();
 }

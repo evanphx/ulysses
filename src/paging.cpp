@@ -5,7 +5,9 @@
 #include "kheap.hpp"
 #include "monitor.hpp"
 #include "cpu.hpp"
-#include "task.hpp"
+#include "thread.hpp"
+#include "scheduler.hpp"
+#include "process.hpp"
 
 VirtualMemory vmem = {0, 0, 0, 0};
 
@@ -31,7 +33,7 @@ void VirtualMemory::free_frame(x86::Page* page) {
   page->clear();
 }
 
-bool MemoryMapping::fulfill(Task* task, u32 request) {
+bool MemoryMapping::fulfill(Thread* task, u32 request) {
   u32 page_address = request & cpu::cPageMask;
   u32 request_offset = page_address - address_;
 
@@ -77,7 +79,7 @@ public:
     // The faulting address is stored in the CR2 register.
     u32 faulting_address = cpu::fault_address();
 
-    MemoryMapping* mmap = scheduler.current->find_mapping(faulting_address);
+    MemoryMapping* mmap = scheduler.process()->find_mapping(faulting_address);
 
     // The error code gives us details of what happened.
     bool present = !(regs->err_code & 0x1); // Page not present

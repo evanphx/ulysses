@@ -58,7 +58,7 @@ namespace x86 {
   };
 }
 
-struct Task;
+class Thread;
 
 class MemoryMapping {
   u32 address_;
@@ -128,7 +128,7 @@ public:
     return (flags_ & eWritable) == eWritable;
   }
 
-  bool fulfill(Task* task, u32 addr);
+  bool fulfill(Thread* task, u32 addr);
 };
 
 struct VirtualMemory {
