@@ -28,9 +28,13 @@ public:
 
   enum State {
     eReady,
+    eRunning,
+
     eWaiting,
-    eDead,
-    eIOWait
+    eIOWait,
+
+    eDieing,
+    eDead
   };
 
   enum Lists {
@@ -57,11 +61,14 @@ public:
   u32 kernel_stack;
 
   u32 alarm_at;
-  int exit_code;
 
   sys::ListNode<Thread> lists[cTotal];
 
 public:
+  bool dead() {
+    return state == eDead;
+  }
+
   Process* process() {
     return process_;
   }
@@ -76,6 +83,8 @@ public:
 
   void sleep_til(int secs);
   bool alarm_expired();
+
+  void die();
 };
 
 #endif

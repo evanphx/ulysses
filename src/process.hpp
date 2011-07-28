@@ -12,10 +12,12 @@ public:
 
   enum Lists {
     cAll = 0,
-    cTotal = 1
+    cCleanup = 1,
+    cTotal = 2
   };
 
   typedef sys::List<Process, cAll> AllList;
+  typedef sys::List<Process, cCleanup> CleanupList;
 
   sys::ListNode<Process> lists[cTotal];
 
@@ -30,7 +32,12 @@ private:
   fs::File* fds_[16];
   ipc::Channel* channels_[16];
 
+  bool alive_;
+  int exit_code_;
+
 public:
+  x86::PageDirectory* directory;
+
   int pid() {
     return pid_;
   }
@@ -53,6 +60,12 @@ public:
 
     return -1;
   }
+
+  void add_thread(Thread* thr) {
+    threads_.append(thr);
+  }
+
+  void exit(int code);
 
   Process(int pid);
 

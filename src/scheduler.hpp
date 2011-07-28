@@ -11,11 +11,11 @@ public:
   Thread* task0;
 
   Thread::RunList ready_queue;
-  Thread::RunList cleanup_queue;
   Thread::RunList waiting_queue;
 
 private:
   Process::AllList processes_;
+  Process::CleanupList cleanup_;
 
 public:
 
@@ -33,6 +33,14 @@ public:
 
   Process* process() {
     return current->process();
+  }
+
+  void remove_from_ready(Thread* thr) {
+    ready_queue.unlink(thr);
+  }
+
+  void remove_from_waiting(Thread* thr) {
+    waiting_queue.unlink(thr);
   }
 
   void cleanup();

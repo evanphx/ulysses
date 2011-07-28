@@ -74,3 +74,13 @@ u32 Process::change_heap(int bytes) {
   return ret;
 }
 
+void Process::exit(int code) {
+  alive_ = false;
+  exit_code_ = code;
+
+  Thread::ProcessList::Iterator i = threads_.begin();
+
+  while(i.more_p()) {
+    i.advance()->die();
+  }
+}

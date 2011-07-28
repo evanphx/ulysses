@@ -9,10 +9,11 @@
 #include "fs.hpp"
 #include "fs/devfs.hpp"
 
+#include "scheduler.hpp"
+
 Thread::Thread(Process* process)
   : process_(process)
   , alarm_at(0)
-  , exit_code(0)
 {}
 
 void Thread::sleep_til(int secs) {
@@ -23,5 +24,15 @@ bool Thread::alarm_expired() {
   return state == Thread::eWaiting && 
          alarm_at != 0 &&
          alarm_at <= timer.ticks;
+}
+
+void Thread::die() {
+  if(state == eWaiting) {
+    scheduler.remove_from_waiting(this);
+  } else if(state == eReady) {
+    scheduler.remove_from_ready(this);
+  }
+
+  state = eDead;
 }
 

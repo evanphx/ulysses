@@ -24,22 +24,22 @@ void Scheduler::init() {
   current = 0;
 
   processes_.init();
+  cleanup_.init();
 
   ready_queue.init();
-  cleanup_queue.init();
   waiting_queue.init();
 
   // Initialise the first thread (kernel thread)
   u32 mem = (u32)&initial_task;
 
   Process* proc = new(kheap) Process(next_pid++);
+  proc->directory = vmem.current_directory;
+
   processes_.append(proc);
   
   current = new((void*)mem) Thread(proc);
   current->directory = vmem.current_directory;
   current->kernel_stack = mem + KERNEL_STACK_SIZE;
-
-  // processes.append(current);
 
   task0 = current;
 
@@ -50,16 +50,16 @@ void Scheduler::init() {
 }
 
 void Scheduler::cleanup() {
-  Thread::RunList::Iterator i = cleanup_queue.begin();
+  Process::CleanupList::Iterator i = cleanup_.begin();
 
   while(i.more_p()) {
-    Thread* task = i.advance();
-    cleanup_queue.unlink(task);
-    // processes.unlink(task);
+    Process* proc = i.advance();
+    cleanup_.unlink(proc);
+    processes_.unlink(proc);
 
-    vmem.free_directory(task->directory);
+    vmem.free_directory(proc->directory);
 
-    kfree(task);
+    kfree(proc);
   }
 }
 
@@ -135,9 +135,8 @@ void Scheduler::exit(int code) {
 
   ready_queue.unlink(current);
 
-  current->exit_code = code;
-  current->state = Thread::eDead;
-  cleanup_queue.prepend(current);
+  process()->exit(code);
+  cleanup_.prepend(current->process());
 
   cpu::restore_interrupts(st);
 
@@ -199,10 +198,13 @@ int Scheduler::fork() {
   Process* proc = new(kheap) Process(next_pid++);
   processes_.append(proc);
 
+  proc->directory = directory;
+
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
   Thread* new_task = new((void*)mem) Thread(proc);
   new_task->directory = directory;
+
   new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
 
   ready_queue.append(new_task);
