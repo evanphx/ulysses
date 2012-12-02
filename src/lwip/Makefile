@@ -1,8 +1,10 @@
-CC=../../buildtools/local/bin/i386-pc-ulysses-gcc
-LD=../../buildtools/local/bin/i386-pc-ulysses-ld
-AR=../../buildtools/local/bin/i386-pc-ulysses-ar
+CC=gcc
+LD=ld
+AR=ar
 
 CCDEP=$(CC)
+
+CFLAGS +=  -fno-stack-protector
 
 #CFLAGS += -DLWIP_DEBUG
 ARFLAGS=rs
@@ -50,7 +52,6 @@ OBJS=$(notdir $(LWIPFILES:.c=.o))
 LWIPLIB=liblwip4.a
 
 all compile: $(LWIPLIB)
-	cp $(LWIPLIB) ../
 
 .PHONY: all depend compile clean
 

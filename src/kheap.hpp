@@ -115,17 +115,17 @@ void kfree(void *p);
 
 }
 
-inline void* operator new(long unsigned int sz) {
+inline void* operator new(unsigned int sz) {
   kabort();
   return (void*)-1;
 }
 
-inline void* operator new(long unsigned int sz, Heap*) {
+inline void* operator new(unsigned int sz, Heap*) {
   return (void*)kmalloc(sz);
 }
 
 // Make placement new work!
-inline void* operator new(long unsigned int, void* __p) { return __p; }
+inline void* operator new(unsigned int, void* __p) { return __p; }
 
 template <typename T>
 T* knew() {

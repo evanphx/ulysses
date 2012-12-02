@@ -4,6 +4,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#define UDEBUG 1
+
 extern "C" {
 
 // Some nice typedefs, to standardise sizes across platforms.

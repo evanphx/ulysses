@@ -1,0 +1,17 @@
+DEFN_SYSCALL1(kprint, 0, const char*);
+DEFN_SYSCALL0(fork, 1);
+DEFN_SYSCALL0(getpid, 2);
+DEFN_SYSCALL0(pause, 3);
+DEFN_SYSCALL1(exit, 4, int);
+DEFN_SYSCALL1(sleep, 5, int);
+DEFN_SYSCALL1(wait_any, 6, int*);
+DEFN_SYSCALL2(open, 7, char*, int);
+DEFN_SYSCALL3(read, 8, int, char*, int);
+DEFN_SYSCALL3(mount, 9, const char*, const char*, const char*);
+DEFN_SYSCALL3(seek, 10, int, int, int);
+DEFN_SYSCALL3(write, 11, int, int, char*);
+DEFN_SYSCALL1(sbrk, 12, int);
+DEFN_SYSCALL3(getdents, 13, int, void*, int);
+DEFN_SYSCALL2(channel_connect, 14, int, int);
+DEFN_SYSCALL0(channel_create, 15);
+DEFN_SYSCALL3(msg_recv, 16, int, void*, int);

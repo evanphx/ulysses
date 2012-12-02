@@ -466,7 +466,7 @@ void RTL8139::init() {
   rx_buffer = virt_rx_ring;
   cur_rx = 0;
 
-  u32int tx_desc = 4;
+  // u32int tx_desc = 4;
   u32int tx_buf_size = 1546;
 
   for(int i = 0; i < 4; i++) {

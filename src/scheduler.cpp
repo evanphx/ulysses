@@ -100,7 +100,7 @@ void Scheduler::switch_task() {
   // If we fell off the end of the linked list start again at the beginning.
   if(!next) {
     if(ready_queue.count() == 0) {
-      console.printf("NO TASKS TO RUN\n");
+      console.printf("NO Threads TO RUN\n");
       kabort();
     }
 

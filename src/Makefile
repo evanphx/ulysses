@@ -5,7 +5,7 @@
 
 COBJECTS=main.o console.o common.o descriptor_tables.o isr.o timer.o \
         kheap.o paging.o ordered_array.o fs.o fs/initrd.o thread.o syscall.o \
-				scheduler.o process.o \
+				scheduler.o process.o debug.o \
 				keyboard.o pci.o rtl8139.o eth.o arp.o rtc.o pit.o elf.o \
 				block.o ata.o fs/devfs.o fs/ext2.o block_buffer.o character.o \
 				character/console.o fs/tmpfs.o cpu.o
@@ -28,10 +28,14 @@ LIBGCC=`$(CC) -print-libgcc-file-name`
 LDFLAGS=--oformat=elf32-i386 -melf_i386 -Tlink.ld
 ASFLAGS=-felf
 
-CC=../buildtools/local/bin/i386-pc-ulysses-g++ -std=c++0x
-CXX=../buildtools/local/bin/i386-pc-ulysses-g++ -std=c++0x
+CC=g++ -std=c++0x -m32
+CXX=g++ -std=c++0x -m32
+LD=ld -m32
 
-LD=../buildtools/local/bin/i386-pc-ulysses-ld
+# CC=../buildtools/local/bin/i386-pc-ulysses-g++ -std=c++0x
+# CXX=../buildtools/local/bin/i386-pc-ulysses-g++ -std=c++0x
+
+# LD=../buildtools/local/bin/i386-pc-ulysses-ld
 
 all: src/kernel
 
@@ -43,7 +47,7 @@ clean:
 	-rm *.o kernel
 
 src/kernel: $(OBJECTS)
-	cd lwip; make
+	cd lwip; make -q liblwip4.a || (make; cp liblwip4.a ..)
 	$(LD) $(LDFLAGS) -o kernel $(OBJECTS) liblwip4.a $(LIBGCC)
 
 .s.o:

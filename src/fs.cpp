@@ -4,6 +4,7 @@
 #include "fs.hpp"
 #include "console.hpp"
 #include "fs/devfs.hpp"
+#include "debug.hpp"
 
 fs::Node *fs_root = 0; // The root of the filesystem.
 
@@ -79,7 +80,10 @@ namespace fs {
   }
 
   int mount(const char* name, const char* type, const char* dev_name) {
-    console.printf("mounting %s to %s, type=%s\n", dev_name, name, type);
+    if(debug::verbose) {
+      console.printf("mounting %s to %s, type=%s\n", dev_name, name, type);
+    }
+
     fs::Node* node = lookup(name+1, strlen(name)-1, fs_root);
     if(!node) return -1;
 

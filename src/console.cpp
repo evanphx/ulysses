@@ -311,8 +311,8 @@ void Console::vprintf(const char* fmt, va_list ap) {
   while(*fmt) {
     cur = *fmt++;
     if(cur == '%') {
-      int zero_pad = 0;
-      int space_pad = 0;
+      // int zero_pad = 0;
+      // int space_pad = 0;
       int width = 0;
       int is_long = 0;
 
@@ -417,10 +417,10 @@ retry:
       case 'z':
         goto retry;
       case '0':
-        zero_pad = 1;
+        // zero_pad = 1;
         goto retry;
       case ' ':
-        space_pad = 1;
+        // space_pad = 1;
         goto retry;
       case '1':
         width = 1;

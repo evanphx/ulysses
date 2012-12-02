@@ -16,11 +16,12 @@
 #include "ipc.hpp"
 #include "process.hpp"
 
-void sys_kprint(const char* p) {
+SYSCALL(0, kprint, const char* p) {
   console.printf("%d: %s", scheduler.getpid(), p);
+  return 0;
 }
 
-void sys_exec(Registers* regs) {
+SYSCALL(17, exec, Registers* regs) {
   const char* path = (const char*)regs->ebx;
   const char** argp = (const char**)regs->ecx;
   const char** envp = (const char**)regs->edx;
@@ -28,13 +29,14 @@ void sys_exec(Registers* regs) {
   elf::Request req(path, argp, envp);
 
   if(!req.load_file()) {
+    regs->eax = -1;
     console.printf("Exec of %s failed, not found.\n", path);
-    return;
+    return 0;
   }
 
   if(!elf::load_node(req)) {
     regs->eax = -1;
-    return;
+    return 0;
   }
 
   regs->eax = 0;
@@ -43,37 +45,44 @@ void sys_exec(Registers* regs) {
   regs->ss = segments::cUserDS;
   regs->cs = segments::cUserCS;
   regs->useresp = req.new_esp;
+
+  return 0;
 }
 
-int sys_fork() {
+DEFN_SYSCALL3(exec, 17, const char*, const char**, const char**);
+
+SYSCALL(1, fork) {
   return scheduler.fork();
 }
 
-int sys_getpid() {
+SYSCALL(2, getpid) {
   return scheduler.getpid();
 }
 
-void sys_pause() {
+SYSCALL(3, pause) {
   scheduler.switch_task();
+  return 0;
 }
 
-void sys_exit(int code) {
+SYSCALL(4, exit, int code) {
   scheduler.exit(code);
+  return 0;
 }
 
-void sys_sleep(int seconds) {
+SYSCALL(5, sleep, int seconds) {
   scheduler.sleep(seconds);
+  return seconds;
 }
 
-void sys_wait_any(int* status) {
-  scheduler.wait_any(status);
+SYSCALL(6, wait_any, int* status) {
+  return scheduler.wait_any(status);
 }
 
-int sys_open(char* name, int mode) {
+SYSCALL(7, open, char* name, int mode) {
   return scheduler.process()->open_file(name, mode);
 }
 
-int sys_read(int fd, char* buffer, int size) {
+SYSCALL(8, read, int fd, char* buffer, int size) {
   if(fs::File* file = scheduler.process()->get_file(fd)) {
     if(size == 0) return 0;
     if(size < 0) return -1;
@@ -85,7 +94,7 @@ int sys_read(int fd, char* buffer, int size) {
   }
 }
 
-int sys_write(int fd, int size, char* buffer) {
+SYSCALL(11, write, int fd, int size, char* buffer) {
   if(fs::File* file = scheduler.process()->get_file(fd)) {
     if(size == 0) return 0;
     if(size < 0) return -1;
@@ -97,11 +106,11 @@ int sys_write(int fd, int size, char* buffer) {
   }
 }
 
-int sys_mount(const char* path, const char* fstype, const char* dev) {
+SYSCALL(9, mount, const char* path, const char* fstype, const char* dev) {
   return fs::mount(path, fstype, dev);
 }
 
-int sys_seek(int fd, int pos, int whence) {
+SYSCALL(10, seek, int fd, int pos, int whence) {
   if(fs::File* file = scheduler.process()->get_file(fd)) {
     file->seek(pos, whence);
     return 0;
@@ -110,13 +119,12 @@ int sys_seek(int fd, int pos, int whence) {
   return -1;
 }
 
-u32 sys_sbrk(int bytes) {
+SYSCALL(12, sbrk, int bytes) {
   u32 addr = scheduler.process()->change_heap(bytes);
-  console.printf("sbrk = %x\n", addr);
   return addr;
 }
 
-int sys_getdents(int fd, void* dp, int count) {
+SYSCALL(13, getdents, int fd, void* dp, int count) {
   if(fs::File* file = scheduler.process()->get_file(fd)) {
     return file->get_entries(dp, count);
   }
@@ -124,116 +132,41 @@ int sys_getdents(int fd, void* dp, int count) {
   return -1;
 }
 
-int sys_channel_connect(int pid, int cid) {
+SYSCALL(14, channel_connect, int pid, int cid) {
   return -1; // ipc::channel_connect(pid, cid);
 }
 
-int sys_channel_create() {
+SYSCALL(15, channel_create) {
   return -1; // ipc::channel_create();
 }
 
-int sys_msg_recv(int cid, void* msg, int len) {
+SYSCALL(16, msg_recv, int cid, void* msg, int len) {
   return -1; // ipc::msg_recv(cid, msg, len);
 }
 
-const static u32 raw_syscall_base = 1024;
+const char* syscall_name(int idx);
 
-DEFN_SYSCALL1(kprint, 0, const char*);
-DEFN_SYSCALL0(fork, 1);
-DEFN_SYSCALL0(getpid, 2);
-DEFN_SYSCALL0(pause, 3);
-DEFN_SYSCALL1(exit, 4, int);
-DEFN_SYSCALL1(sleep, 5, int);
-DEFN_SYSCALL1(wait_any, 6, int*);
-DEFN_SYSCALL2(open, 7, char*, int);
-DEFN_SYSCALL3(read, 8, int, char*, int);
-DEFN_SYSCALL3(mount, 9, char*, char*, char*);
-DEFN_SYSCALL3(seek, 10, int, int, int);
-DEFN_SYSCALL3(write, 11, int, int, char*);
-DEFN_SYSCALL1(sbrk, 12, int);
-DEFN_SYSCALL3(getdents, 13, int, void*, int);
-
-DEFN_SYSCALL2(channel_connect, 14, int, int);
-DEFN_SYSCALL0(channel_create, 15);
-
-DEFN_SYSCALL3(msg_recv, 16, int, void*, int);
-
-DEFN_SYSCALL3(exec, raw_syscall_base + 0, const char*, const char**, const char**);
-
-static void* syscalls[] = {
-    (void*)&sys_kprint,
-    (void*)&sys_fork,
-    (void*)&sys_getpid,
-    (void*)&sys_pause,
-    (void*)&sys_exit,
-    (void*)&sys_sleep,
-    (void*)&sys_wait_any,
-    (void*)&sys_open,
-    (void*)&sys_read,
-    (void*)&sys_mount,
-    (void*)&sys_seek,
-    (void*)&sys_write,
-    (void*)&sys_sbrk,
-    (void*)&sys_getdents,
-    (void*)&sys_channel_connect,
-    (void*)&sys_channel_create,
-    (void*)&sys_msg_recv
-};
-
-static void* raw_syscalls[] = {
-    (void*)&sys_exec
-};
-
-const static u32 num_syscalls = 17;
-const static u32 num_raw_syscalls = 1;
+#include "syscall_tramp.incl.hpp"
 
 class SyscallDispatcher : public interrupt::Handler {
 public:
   void handle(Registers* regs) {
 
-    // console.printf("in syscall handler: %d (total %d)\n", regs->eax, num_syscalls);
-    void* location;
+    /*
+    console.printf("in syscall handler: %s (%d) (total %d)\n",
+                   syscall_names[regs->eax], regs->eax, num_syscalls);
+    */
 
     // Firstly, check if the requested syscall number is valid.
     // The syscall number is found in EAX.
-    if(regs->eax >= num_syscalls) {
-      if(regs->eax >= raw_syscall_base) {
-        u32 rebase = regs->eax - raw_syscall_base;
-        if(rebase >= num_raw_syscalls) {
-          console.printf("Unknown syscall: %d\n", regs->eax);
-          regs->eax = 1;
-          return;
-        }
 
-        location = raw_syscalls[rebase];
-        ((void (*)(Registers*))location)(regs);
-      } else {
-        console.printf("Unknown syscall: %d\n", regs->eax);
-        regs->eax = 1;
-        return;
-      }
+
+    if(regs->eax < num_syscalls) {
+      void* location = syscalls[regs->eax];
+
+      ((void (*)(Registers*))location)(regs);
     } else {
-      // Get the required syscall location.
-      location = syscalls[regs->eax];
-
-      // We don't know how many parameters the function wants, so we just
-      // push them all onto the stack in the correct order. The function will
-      // use all the parameters it wants, and we can pop them all back off afterwards.
-      int ret;
-      asm volatile (" \
-          push %1; \
-          push %2; \
-          push %3; \
-          push %4; \
-          push %5; \
-          call *%6; \
-          pop %%ebx; \
-          pop %%ebx; \
-          pop %%ebx; \
-          pop %%ebx; \
-          pop %%ebx; \
-          " : "=a" (ret) : "r" (regs->edi), "r" (regs->esi), "r" (regs->edx), "r" (regs->ecx), "r" (regs->ebx), "r" (location));
-      regs->eax = ret;
+      console.printf("bad syscall\n");
     }
   }
 };
@@ -245,3 +178,8 @@ void initialise_syscalls() {
   interrupt::register_isr(0x80, &dispatcher);
 }
 
+#include "syscall_impl.incl.hpp"
+
+const char* syscall_name(int idx) {
+  return syscall_names[idx];
+}

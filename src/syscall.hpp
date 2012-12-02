@@ -8,6 +8,22 @@
 
 void initialise_syscalls();
 
+#ifdef UDEBUG_SYSCALL
+
+#define TRACE_START_SYSCALL(i) console.printf("=> %s\n", syscall_name(i))
+#define TRACE_END_SYSCALL(i) console.printf("<= %s\n", syscall_name(i))
+
+#else
+
+#define TRACE_START_SYSCALL(i)
+#define TRACE_END_SYSCALL(i)
+
+#endif
+
+#define SYSCALL_NAME(name) sysimpl##name
+
+#define SYSCALL(num, name, ...) int SYSCALL_NAME(name)(__VA_ARGS__)
+
 #define DECL_SYSCALL0(fn) int syscall_##fn();
 #define DECL_SYSCALL1(fn,p1) int syscall_##fn(p1);
 #define DECL_SYSCALL2(fn,p1,p2) int syscall_##fn(p1,p2);
@@ -63,13 +79,8 @@ int syscall_##fn(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) \
   return a; \
 }
 
-DECL_SYSCALL1(kprint, const char*)
 DECL_SYSCALL3(exec, const char*, const char**, const char**)
 
-DECL_SYSCALL0(fork);
-DECL_SYSCALL0(getpid);
-DECL_SYSCALL0(pause);
-DECL_SYSCALL1(exit, int);
-DECL_SYSCALL1(sleep, int);
+#include "syscall_decl.incl.hpp"
 
 #endif
