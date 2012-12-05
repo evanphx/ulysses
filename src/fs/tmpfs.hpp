@@ -21,15 +21,17 @@ namespace tmpfs {
   };
 
   class FileNode : public Node {
+    u32 size_;
     u8* chunk_;
 
   public:
-    static const u32 cChunkSize = 1024;
+    static const u32 cInitialChunkSize = 1024;
 
     FileNode(FS* fs);
 
     u32 read(u32 offset, u32 size, u8* buffer);
     u32 write(u32 offset, u32 size, u8* buffer);
+    void import_raw(u8* buffer, u32 size);
   };
 
   typedef sys::OOHash<sys::String, Node*> NodeHash;
@@ -44,7 +46,7 @@ namespace tmpfs {
 
     struct dirent* readdir(u32 index);
     fs::Node* finddir(const char* name, int size);
-    fs::Node* create_file(sys::String& str);
+    tmpfs::FileNode* create_file(sys::String& str);
     int get_entries(int pos, void* dp, int count);
   };
 
@@ -55,6 +57,10 @@ namespace tmpfs {
     FS();
 
     fs::Node* root() {
+      return root_;
+    }
+
+    DirectoryNode* specific_root() {
       return root_;
     }
   };

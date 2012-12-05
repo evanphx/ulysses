@@ -19,6 +19,7 @@
 #include "fs/tmpfs.hpp"
 #include "character/console.hpp"
 #include "scheduler.hpp"
+#include "tar.hpp"
 
 #include "cpu.hpp"
 
@@ -71,16 +72,15 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
   u32 initrd_end = *(u32*)(mboot_ptr->mods_addr+4);
   initrd_end += KERNEL_VIRTUAL_BASE;
 
-  console.printf("initrd: 0x%x - 0x%x\n", initrd_location, initrd_end-1);
+  console.printf("initrd: 0x%x - 0x%x (%d)\n", 
+      initrd_location, initrd_end-1,
+      initrd_end - initrd_location);
 
   // Start paging.
   vmem.init(mem_total, kstart, kend, initrd_end);
 
   // Start multitasking.
   scheduler.init();
-
-  // Initialise the initial ramdisk, and set it as the filesystem root.
-  fs_root = initrd::fs.init(initrd_location);
 
   keyboard.init();
 
@@ -90,6 +90,17 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
   devfs::main.init();
   ext2::init();
   tmpfs::init();
+
+  tmpfs::FS* fs = new (kheap) tmpfs::FS();
+  fs_root = fs->root();
+
+  tar::Archive arc((u8*)initrd_location, initrd_end - initrd_location);
+  int count = arc.load_into(fs->specific_root());
+
+  console.printf("Imported entries from tar: %d\n", count);
+
+  // Initialise the initial ramdisk, and set it as the filesystem root.
+  // fs_root = initrd::fs.init(initrd_location);
 
   block::registry.init();
   console_driver::init();

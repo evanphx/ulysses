@@ -47,12 +47,12 @@ namespace tmpfs {
     return 0;
   }
 
-  fs::Node* DirectoryNode::create_file(sys::String& name) {
-    Node* n;
+  tmpfs::FileNode* DirectoryNode::create_file(sys::String& name) {
+    // Node* n;
 
-    if(entries_.fetch(name, &n)) {
-      return n;
-    }
+    // if(entries_.fetch(name, &n)) {
+      // return n;
+    // }
 
     FileNode* file = new(kheap) FileNode(fs_);
 
@@ -143,18 +143,29 @@ namespace tmpfs {
 
   FileNode::FileNode(FS* fs)
     : Node(fs)
-    , chunk_((u8*)kmalloc(cChunkSize))
+    , size_(cInitialChunkSize)
+    , chunk_((u8*)kmalloc(cInitialChunkSize))
   {}
 
   u32 FileNode::read(u32 offset, u32 size, u8* buffer) {
-    ASSERT(offset + size < cChunkSize);
+    ASSERT(offset + size < size_);
     memcpy(buffer, chunk_ + offset, size);
     return size;
   }
 
   u32 FileNode::write(u32 offset, u32 size, u8* buffer) {
-    ASSERT(offset + size < cChunkSize);
+    ASSERT(offset + size < size_);
     memcpy(chunk_ + offset, buffer, size);
     return size;
+  }
+
+  void FileNode::import_raw(u8* buf, u32 size) {
+    if(size > size_) {
+      kfree(chunk_);
+      chunk_ = (u8*)kmalloc(size);
+      size_ = size;
+    }
+
+    memcpy(chunk_, buf, size);
   }
 }
