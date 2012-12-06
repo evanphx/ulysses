@@ -159,6 +159,8 @@ namespace tar {
       ASSERT(ret == Z_OK);
     }
 
+    (void)inflateEnd(&strm);
+
     return count;
   }
 }
