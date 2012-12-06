@@ -32,6 +32,7 @@ namespace tmpfs {
     u32 read(u32 offset, u32 size, u8* buffer);
     u32 write(u32 offset, u32 size, u8* buffer);
     void import_raw(u8* buffer, u32 size);
+    u8* resize(u32 size);
   };
 
   typedef sys::OOHash<sys::String, Node*> NodeHash;

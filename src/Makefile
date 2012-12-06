@@ -23,7 +23,7 @@ OBJECTS=$(SOBJECTS)
 OBJECTS+=$(COBJECTS)
 
 OPT=-O0 -fno-inline
-CXXFLAGS=$(OPT) -g -ggdb3 -Wall -Werror -fno-rtti -fno-exceptions -nostdlib -fno-builtin -I. -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip
+CXXFLAGS=$(OPT) -g -ggdb3 -Wall -Werror -fno-rtti -fno-exceptions -nostdlib -fno-builtin -fno-stack-protector -I. -Ilwip/src/include -Ilwip/src/include/ipv4 -Ilwip/arch -Ilwip -Ilib/zlib
 LIBGCC=`$(CC) -print-libgcc-file-name`
 LDFLAGS=--oformat=elf32-i386 -melf_i386 -Tlink.ld
 ASFLAGS=-felf
@@ -46,9 +46,15 @@ dep:
 clean:
 	-rm *.o kernel
 
-src/kernel: $(OBJECTS)
+libz.a:
+	cd lib/zlib; CFLAGS="-fno-stack-protector -fno-builtin -m32 -nostdlib -O0" ./configure --static --solo && make libz.a
+	cp lib/zlib/libz.a .
+
+liblwip.a:
 	cd lwip; make -q liblwip4.a || (make; cp liblwip4.a ..)
-	$(LD) $(LDFLAGS) -o kernel $(OBJECTS) liblwip4.a $(LIBGCC)
+
+src/kernel: $(OBJECTS) liblwip.a libz.a
+	$(LD) $(LDFLAGS) -o kernel $(OBJECTS) liblwip4.a libz.a $(LIBGCC)
 
 .s.o:
 	nasm $(ASFLAGS) $<

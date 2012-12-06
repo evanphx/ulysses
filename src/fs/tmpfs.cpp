@@ -168,4 +168,14 @@ namespace tmpfs {
 
     memcpy(chunk_, buf, size);
   }
+
+  u8* FileNode::resize(u32 size) {
+    if(size > size_) {
+      kfree(chunk_);
+      chunk_ = (u8*)kmalloc(size);
+      size_ = size;
+    }
+
+    return chunk_;
+  }
 }

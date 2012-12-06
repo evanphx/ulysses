@@ -1,0 +1,1559 @@
+--------------------
+./configure --static --solo
+Wed Dec  5 18:46:22 UTC 2012
+
+Checking for gcc...
+=== ztest4858.c ===
+extern int getchar();
+int hello() {return getchar();}
+===
+gcc -c -O3 ztest4858.c
+... using gcc
+
+Building static library libz.a version 1.2.7 with gcc.
+
+
+=== ztest4858.c ===
+#include <sys/types.h>
+off64_t dummy = 0;
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest4858.c
+Checking for off64_t... Yes.
+Checking for fseeko... Yes.
+
+=== ztest4858.c ===
+#include <string.h>
+#include <errno.h>
+int main() { return strlen(strerror(errno)); }
+===
+gcc -O3 -D_LARGEFILE64_SOURCE=1 -o ztest4858 ztest4858.c
+Checking for strerror... Yes.
+
+=== ztest4858.c ===
+#include <unistd.h>
+int main() { return 0; }
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest4858.c
+Checking for unistd.h... Yes.
+
+=== ztest4858.c ===
+#include <stdarg.h>
+int main() { return 0; }
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest4858.c
+Checking for stdarg.h... Yes.
+
+=== ztest4858.c ===
+#include <stdio.h>
+#include <stdarg.h>
+#include "zconf.h"
+int main()
+{
+#ifndef STDC
+  choke me
+#endif
+  return 0;
+}
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest4858.c
+Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf().
+
+=== ztest4858.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return 0;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -O3 -D_LARGEFILE64_SOURCE=1 -o ztest4858 ztest4858.c
+Checking for vsnprintf() in stdio.h... Yes.
+
+=== ztest4858.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  int n;
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  n = vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return n;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest4858.c
+Checking for return value of vsnprintf()... Yes.
+
+=== ztest4858.c ===
+#define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
+int ZLIB_INTERNAL foo;
+int main()
+{
+  return 0;
+}
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest4858.c
+Checking for attribute(visibility) support... Yes.
+
+=== ztest4858.c ===
+#include <stdio.h>
+#define is32(n,t) for(n=1,k=0;n;n<<=1,k++);if(k==32){puts(t);return 0;}
+int main() {
+    int k;
+    unsigned i;
+    unsigned long l;
+    unsigned short s;
+    is32(i, "unsigned")
+    is32(l, "unsigned long")
+    is32(s, "unsigned short")
+    return 1;
+}
+===
+gcc -O3 -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN ztest4858.c -o ztest4858
+Looking for a four-byte integer type... Found.
+
+ALL = static all64
+AR = ar
+ARFLAGS = rc
+CC = gcc
+CFLAGS = -O3 -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+CPP = gcc -E
+EXE =
+LDCONFIG = ldconfig
+LDFLAGS =
+LDSHARED = gcc
+LDSHAREDLIBC = -lc
+OBJC = $(OBJZ)
+PIC_OBJC = $(PIC_OBJZ)
+RANLIB = ranlib
+SFLAGS = -O3 -fPIC -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+SHAREDLIB =
+SHAREDLIBM =
+SHAREDLIBV =
+STATICLIB = libz.a
+TEST = all teststatic test64
+VER = 1.2.7
+Z_U4 = unsigned
+exec_prefix = ${prefix}
+includedir = ${prefix}/include
+libdir = ${exec_prefix}/lib
+mandir = ${prefix}/share/man
+prefix = /usr/local
+sharedlibdir = ${libdir}
+uname = Linux
+--------------------
+
+
+--------------------
+./configure --static --solo
+Wed Dec  5 18:49:23 UTC 2012
+
+Checking for gcc...
+=== ztest5032.c ===
+extern int getchar();
+int hello() {return getchar();}
+===
+gcc -c -O3 ztest5032.c
+... using gcc
+
+Building static library libz.a version 1.2.7 with gcc.
+
+
+=== ztest5032.c ===
+#include <sys/types.h>
+off64_t dummy = 0;
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5032.c
+Checking for off64_t... Yes.
+Checking for fseeko... Yes.
+
+=== ztest5032.c ===
+#include <string.h>
+#include <errno.h>
+int main() { return strlen(strerror(errno)); }
+===
+gcc -O3 -D_LARGEFILE64_SOURCE=1 -o ztest5032 ztest5032.c
+Checking for strerror... Yes.
+
+=== ztest5032.c ===
+#include <unistd.h>
+int main() { return 0; }
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5032.c
+Checking for unistd.h... Yes.
+
+=== ztest5032.c ===
+#include <stdarg.h>
+int main() { return 0; }
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5032.c
+Checking for stdarg.h... Yes.
+
+=== ztest5032.c ===
+#include <stdio.h>
+#include <stdarg.h>
+#include "zconf.h"
+int main()
+{
+#ifndef STDC
+  choke me
+#endif
+  return 0;
+}
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5032.c
+Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf().
+
+=== ztest5032.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return 0;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -O3 -D_LARGEFILE64_SOURCE=1 -o ztest5032 ztest5032.c
+Checking for vsnprintf() in stdio.h... Yes.
+
+=== ztest5032.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  int n;
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  n = vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return n;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5032.c
+Checking for return value of vsnprintf()... Yes.
+
+=== ztest5032.c ===
+#define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
+int ZLIB_INTERNAL foo;
+int main()
+{
+  return 0;
+}
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5032.c
+Checking for attribute(visibility) support... Yes.
+
+=== ztest5032.c ===
+#include <stdio.h>
+#define is32(n,t) for(n=1,k=0;n;n<<=1,k++);if(k==32){puts(t);return 0;}
+int main() {
+    int k;
+    unsigned i;
+    unsigned long l;
+    unsigned short s;
+    is32(i, "unsigned")
+    is32(l, "unsigned long")
+    is32(s, "unsigned short")
+    return 1;
+}
+===
+gcc -O3 -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN ztest5032.c -o ztest5032
+Looking for a four-byte integer type... Found.
+
+ALL = static all64
+AR = ar
+ARFLAGS = rc
+CC = gcc
+CFLAGS = -O3 -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+CPP = gcc -E
+EXE =
+LDCONFIG = ldconfig
+LDFLAGS =
+LDSHARED = gcc
+LDSHAREDLIBC = -lc
+OBJC = $(OBJZ)
+PIC_OBJC = $(PIC_OBJZ)
+RANLIB = ranlib
+SFLAGS = -O3 -fPIC -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+SHAREDLIB =
+SHAREDLIBM =
+SHAREDLIBV =
+STATICLIB = libz.a
+TEST = all teststatic test64
+VER = 1.2.7
+Z_U4 = unsigned
+exec_prefix = ${prefix}
+includedir = ${prefix}/include
+libdir = ${exec_prefix}/lib
+mandir = ${prefix}/share/man
+prefix = /usr/local
+sharedlibdir = ${libdir}
+uname = Linux
+--------------------
+
+
+--------------------
+./configure --static --solo
+Wed Dec  5 22:46:43 UTC 2012
+
+Checking for gcc...
+=== ztest5440.c ===
+extern int getchar();
+int hello() {return getchar();}
+===
+gcc -c -O3 ztest5440.c
+... using gcc
+
+Building static library libz.a version 1.2.7 with gcc.
+
+
+=== ztest5440.c ===
+#include <sys/types.h>
+off64_t dummy = 0;
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5440.c
+Checking for off64_t... Yes.
+Checking for fseeko... Yes.
+
+=== ztest5440.c ===
+#include <string.h>
+#include <errno.h>
+int main() { return strlen(strerror(errno)); }
+===
+gcc -O3 -D_LARGEFILE64_SOURCE=1 -o ztest5440 ztest5440.c
+Checking for strerror... Yes.
+
+=== ztest5440.c ===
+#include <unistd.h>
+int main() { return 0; }
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5440.c
+Checking for unistd.h... Yes.
+
+=== ztest5440.c ===
+#include <stdarg.h>
+int main() { return 0; }
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5440.c
+Checking for stdarg.h... Yes.
+
+=== ztest5440.c ===
+#include <stdio.h>
+#include <stdarg.h>
+#include "zconf.h"
+int main()
+{
+#ifndef STDC
+  choke me
+#endif
+  return 0;
+}
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5440.c
+Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf().
+
+=== ztest5440.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return 0;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -O3 -D_LARGEFILE64_SOURCE=1 -o ztest5440 ztest5440.c
+Checking for vsnprintf() in stdio.h... Yes.
+
+=== ztest5440.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  int n;
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  n = vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return n;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5440.c
+Checking for return value of vsnprintf()... Yes.
+
+=== ztest5440.c ===
+#define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
+int ZLIB_INTERNAL foo;
+int main()
+{
+  return 0;
+}
+===
+gcc -c -O3 -D_LARGEFILE64_SOURCE=1 ztest5440.c
+Checking for attribute(visibility) support... Yes.
+
+=== ztest5440.c ===
+#include <stdio.h>
+#define is32(n,t) for(n=1,k=0;n;n<<=1,k++);if(k==32){puts(t);return 0;}
+int main() {
+    int k;
+    unsigned i;
+    unsigned long l;
+    unsigned short s;
+    is32(i, "unsigned")
+    is32(l, "unsigned long")
+    is32(s, "unsigned short")
+    return 1;
+}
+===
+gcc -O3 -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN ztest5440.c -o ztest5440
+Looking for a four-byte integer type... Found.
+
+ALL = static all64
+AR = ar
+ARFLAGS = rc
+CC = gcc
+CFLAGS = -O3 -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+CPP = gcc -E
+EXE =
+LDCONFIG = ldconfig
+LDFLAGS =
+LDSHARED = gcc
+LDSHAREDLIBC = -lc
+OBJC = $(OBJZ)
+PIC_OBJC = $(PIC_OBJZ)
+RANLIB = ranlib
+SFLAGS = -O3 -fPIC -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+SHAREDLIB =
+SHAREDLIBM =
+SHAREDLIBV =
+STATICLIB = libz.a
+TEST = all teststatic test64
+VER = 1.2.7
+Z_U4 = unsigned
+exec_prefix = ${prefix}
+includedir = ${prefix}/include
+libdir = ${exec_prefix}/lib
+mandir = ${prefix}/share/man
+prefix = /usr/local
+sharedlibdir = ${libdir}
+uname = Linux
+--------------------
+
+
+--------------------
+./configure --static --solo
+Wed Dec  5 22:49:28 UTC 2012
+
+Checking for gcc...
+=== ztest5571.c ===
+extern int getchar();
+int hello() {return getchar();}
+===
+gcc -c -fno-stack-protector -fno-builtin ztest5571.c
+... using gcc
+
+Building static library libz.a version 1.2.7 with gcc.
+
+
+=== ztest5571.c ===
+#include <sys/types.h>
+off64_t dummy = 0;
+===
+gcc -c -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 ztest5571.c
+Checking for off64_t... Yes.
+Checking for fseeko... Yes.
+
+=== ztest5571.c ===
+#include <string.h>
+#include <errno.h>
+int main() { return strlen(strerror(errno)); }
+===
+gcc -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 -o ztest5571 ztest5571.c
+Checking for strerror... Yes.
+
+=== ztest5571.c ===
+#include <unistd.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 ztest5571.c
+Checking for unistd.h... Yes.
+
+=== ztest5571.c ===
+#include <stdarg.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 ztest5571.c
+Checking for stdarg.h... Yes.
+
+=== ztest5571.c ===
+#include <stdio.h>
+#include <stdarg.h>
+#include "zconf.h"
+int main()
+{
+#ifndef STDC
+  choke me
+#endif
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 ztest5571.c
+Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf().
+
+=== ztest5571.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return 0;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 -o ztest5571 ztest5571.c
+Checking for vsnprintf() in stdio.h... Yes.
+
+=== ztest5571.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  int n;
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  n = vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return n;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 ztest5571.c
+Checking for return value of vsnprintf()... Yes.
+
+=== ztest5571.c ===
+#define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
+int ZLIB_INTERNAL foo;
+int main()
+{
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 ztest5571.c
+Checking for attribute(visibility) support... Yes.
+
+=== ztest5571.c ===
+#include <stdio.h>
+#define is32(n,t) for(n=1,k=0;n;n<<=1,k++);if(k==32){puts(t);return 0;}
+int main() {
+    int k;
+    unsigned i;
+    unsigned long l;
+    unsigned short s;
+    is32(i, "unsigned")
+    is32(l, "unsigned long")
+    is32(s, "unsigned short")
+    return 1;
+}
+===
+gcc -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN ztest5571.c -o ztest5571
+Looking for a four-byte integer type... Found.
+
+ALL = static all64
+AR = ar
+ARFLAGS = rc
+CC = gcc
+CFLAGS = -fno-stack-protector -fno-builtin -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+CPP = gcc -E
+EXE =
+LDCONFIG = ldconfig
+LDFLAGS =
+LDSHARED = gcc
+LDSHAREDLIBC = -lc
+OBJC = $(OBJZ)
+PIC_OBJC = $(PIC_OBJZ)
+RANLIB = ranlib
+SFLAGS = -fno-stack-protector -fno-builtin -fPIC -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+SHAREDLIB =
+SHAREDLIBM =
+SHAREDLIBV =
+STATICLIB = libz.a
+TEST = all teststatic test64
+VER = 1.2.7
+Z_U4 = unsigned
+exec_prefix = ${prefix}
+includedir = ${prefix}/include
+libdir = ${exec_prefix}/lib
+mandir = ${prefix}/share/man
+prefix = /usr/local
+sharedlibdir = ${libdir}
+uname = Linux
+--------------------
+
+
+--------------------
+./configure --static --solo
+Wed Dec  5 23:28:03 UTC 2012
+
+Checking for gcc...
+=== ztest5869.c ===
+extern int getchar();
+int hello() {return getchar();}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 ztest5869.c
+... using gcc
+
+Building static library libz.a version 1.2.7 with gcc.
+
+
+=== ztest5869.c ===
+#include <sys/types.h>
+off64_t dummy = 0;
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 ztest5869.c
+Checking for off64_t... Yes.
+Checking for fseeko... Yes.
+
+=== ztest5869.c ===
+#include <string.h>
+#include <errno.h>
+int main() { return strlen(strerror(errno)); }
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -o ztest5869 ztest5869.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/cc9JHUC0.o: In function `main':
+ztest5869.c:(.text+0xa): undefined reference to `__errno_location'
+ztest5869.c:(.text+0x14): undefined reference to `strerror'
+ztest5869.c:(.text+0x1c): undefined reference to `strlen'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for strerror... No.
+
+=== ztest5869.c ===
+#include <unistd.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest5869.c
+Checking for unistd.h... Yes.
+
+=== ztest5869.c ===
+#include <stdarg.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest5869.c
+Checking for stdarg.h... Yes.
+
+=== ztest5869.c ===
+#include <stdio.h>
+#include <stdarg.h>
+#include "zconf.h"
+int main()
+{
+#ifndef STDC
+  choke me
+#endif
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest5869.c
+Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf().
+
+=== ztest5869.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return 0;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -o ztest5869 ztest5869.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccbJlnTg.o: In function `mytest':
+ztest5869.c:(.text+0x2b): undefined reference to `vsnprintf'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for vsnprintf() in stdio.h... No.
+  WARNING: vsnprintf() not found, falling back to vsprintf(). zlib
+  can build but will be open to possible buffer-overflow security
+  vulnerabilities.
+
+=== ztest5869.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  int n;
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  n = vsprintf(buf, fmt, ap);
+  va_end(ap);
+  return n;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest5869.c
+Checking for return value of vsprintf()... Yes.
+
+=== ztest5869.c ===
+#define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
+int ZLIB_INTERNAL foo;
+int main()
+{
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest5869.c
+Checking for attribute(visibility) support... Yes.
+
+=== ztest5869.c ===
+#include <stdio.h>
+#define is32(n,t) for(n=1,k=0;n;n<<=1,k++);if(k==32){puts(t);return 0;}
+int main() {
+    int k;
+    unsigned i;
+    unsigned long l;
+    unsigned short s;
+    is32(i, "unsigned")
+    is32(l, "unsigned long")
+    is32(s, "unsigned short")
+    return 1;
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN ztest5869.c -o ztest5869
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccoXx1Jp.o: In function `main':
+ztest5869.c:(.text+0x3a): undefined reference to `puts'
+ztest5869.c:(.text+0x76): undefined reference to `puts'
+ztest5869.c:(.text+0xb3): undefined reference to `puts'
+collect2: ld returned 1 exit status
+(exit code 1)
+Looking for a four-byte integer type... Not found.
+
+ALL = static all64
+AR = ar
+ARFLAGS = rc
+CC = gcc
+CFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+CPP = gcc -E
+EXE =
+LDCONFIG = ldconfig
+LDFLAGS =
+LDSHARED = gcc
+LDSHAREDLIBC = -lc
+OBJC = $(OBJZ)
+PIC_OBJC = $(PIC_OBJZ)
+RANLIB = ranlib
+SFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -fPIC -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+SHAREDLIB =
+SHAREDLIBM =
+SHAREDLIBV =
+STATICLIB = libz.a
+TEST = all teststatic test64
+VER = 1.2.7
+Z_U4 =
+exec_prefix = ${prefix}
+includedir = ${prefix}/include
+libdir = ${exec_prefix}/lib
+mandir = ${prefix}/share/man
+prefix = /usr/local
+sharedlibdir = ${libdir}
+uname = Linux
+--------------------
+
+
+--------------------
+./configure --static --solo
+Wed Dec  5 23:47:54 UTC 2012
+
+Checking for gcc...
+=== ztest6068.c ===
+extern int getchar();
+int hello() {return getchar();}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 ztest6068.c
+... using gcc
+
+Building static library libz.a version 1.2.7 with gcc.
+
+
+=== ztest6068.c ===
+#include <sys/types.h>
+off64_t dummy = 0;
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 ztest6068.c
+Checking for off64_t... Yes.
+Checking for fseeko... Yes.
+
+=== ztest6068.c ===
+#include <string.h>
+#include <errno.h>
+int main() { return strlen(strerror(errno)); }
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -o ztest6068 ztest6068.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccBoCKdn.o: In function `main':
+ztest6068.c:(.text+0xa): undefined reference to `__errno_location'
+ztest6068.c:(.text+0x14): undefined reference to `strerror'
+ztest6068.c:(.text+0x1c): undefined reference to `strlen'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for strerror... No.
+
+=== ztest6068.c ===
+#include <unistd.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6068.c
+Checking for unistd.h... Yes.
+
+=== ztest6068.c ===
+#include <stdarg.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6068.c
+Checking for stdarg.h... Yes.
+
+=== ztest6068.c ===
+#include <stdio.h>
+#include <stdarg.h>
+#include "zconf.h"
+int main()
+{
+#ifndef STDC
+  choke me
+#endif
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6068.c
+Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf().
+
+=== ztest6068.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return 0;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -o ztest6068 ztest6068.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccvKVboF.o: In function `mytest':
+ztest6068.c:(.text+0x2b): undefined reference to `vsnprintf'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for vsnprintf() in stdio.h... No.
+  WARNING: vsnprintf() not found, falling back to vsprintf(). zlib
+  can build but will be open to possible buffer-overflow security
+  vulnerabilities.
+
+=== ztest6068.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  int n;
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  n = vsprintf(buf, fmt, ap);
+  va_end(ap);
+  return n;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest6068.c
+Checking for return value of vsprintf()... Yes.
+
+=== ztest6068.c ===
+#define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
+int ZLIB_INTERNAL foo;
+int main()
+{
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest6068.c
+Checking for attribute(visibility) support... Yes.
+
+=== ztest6068.c ===
+#include <stdio.h>
+#define is32(n,t) for(n=1,k=0;n;n<<=1,k++);if(k==32){puts(t);return 0;}
+int main() {
+    int k;
+    unsigned i;
+    unsigned long l;
+    unsigned short s;
+    is32(i, "unsigned")
+    is32(l, "unsigned long")
+    is32(s, "unsigned short")
+    return 1;
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN ztest6068.c -o ztest6068
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccTagcnO.o: In function `main':
+ztest6068.c:(.text+0x3a): undefined reference to `puts'
+ztest6068.c:(.text+0x76): undefined reference to `puts'
+ztest6068.c:(.text+0xb3): undefined reference to `puts'
+collect2: ld returned 1 exit status
+(exit code 1)
+Looking for a four-byte integer type... Not found.
+
+ALL = static all64
+AR = ar
+ARFLAGS = rc
+CC = gcc
+CFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+CPP = gcc -E
+EXE =
+LDCONFIG = ldconfig
+LDFLAGS =
+LDSHARED = gcc
+LDSHAREDLIBC = -lc
+OBJC = $(OBJZ)
+PIC_OBJC = $(PIC_OBJZ)
+RANLIB = ranlib
+SFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -fPIC -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+SHAREDLIB =
+SHAREDLIBM =
+SHAREDLIBV =
+STATICLIB = libz.a
+TEST = all teststatic test64
+VER = 1.2.7
+Z_U4 =
+exec_prefix = ${prefix}
+includedir = ${prefix}/include
+libdir = ${exec_prefix}/lib
+mandir = ${prefix}/share/man
+prefix = /usr/local
+sharedlibdir = ${libdir}
+uname = Linux
+--------------------
+
+
+--------------------
+./configure --static --solo
+Wed Dec  5 23:55:21 UTC 2012
+
+Checking for gcc...
+=== ztest6227.c ===
+extern int getchar();
+int hello() {return getchar();}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 ztest6227.c
+... using gcc
+
+Building static library libz.a version 1.2.7 with gcc.
+
+
+=== ztest6227.c ===
+#include <sys/types.h>
+off64_t dummy = 0;
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 ztest6227.c
+Checking for off64_t... Yes.
+Checking for fseeko... Yes.
+
+=== ztest6227.c ===
+#include <string.h>
+#include <errno.h>
+int main() { return strlen(strerror(errno)); }
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -o ztest6227 ztest6227.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccT3ojfT.o: In function `main':
+ztest6227.c:(.text+0xa): undefined reference to `__errno_location'
+ztest6227.c:(.text+0x14): undefined reference to `strerror'
+ztest6227.c:(.text+0x1c): undefined reference to `strlen'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for strerror... No.
+
+=== ztest6227.c ===
+#include <unistd.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6227.c
+Checking for unistd.h... Yes.
+
+=== ztest6227.c ===
+#include <stdarg.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6227.c
+Checking for stdarg.h... Yes.
+
+=== ztest6227.c ===
+#include <stdio.h>
+#include <stdarg.h>
+#include "zconf.h"
+int main()
+{
+#ifndef STDC
+  choke me
+#endif
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6227.c
+Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf().
+
+=== ztest6227.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return 0;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -o ztest6227 ztest6227.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/cce0HTVa.o: In function `mytest':
+ztest6227.c:(.text+0x2b): undefined reference to `vsnprintf'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for vsnprintf() in stdio.h... No.
+  WARNING: vsnprintf() not found, falling back to vsprintf(). zlib
+  can build but will be open to possible buffer-overflow security
+  vulnerabilities.
+
+=== ztest6227.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  int n;
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  n = vsprintf(buf, fmt, ap);
+  va_end(ap);
+  return n;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest6227.c
+Checking for return value of vsprintf()... Yes.
+
+=== ztest6227.c ===
+#define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
+int ZLIB_INTERNAL foo;
+int main()
+{
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest6227.c
+Checking for attribute(visibility) support... Yes.
+
+=== ztest6227.c ===
+#include <stdio.h>
+#define is32(n,t) for(n=1,k=0;n;n<<=1,k++);if(k==32){puts(t);return 0;}
+int main() {
+    int k;
+    unsigned i;
+    unsigned long l;
+    unsigned short s;
+    is32(i, "unsigned")
+    is32(l, "unsigned long")
+    is32(s, "unsigned short")
+    return 1;
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN ztest6227.c -o ztest6227
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccHjRLic.o: In function `main':
+ztest6227.c:(.text+0x3a): undefined reference to `puts'
+ztest6227.c:(.text+0x76): undefined reference to `puts'
+ztest6227.c:(.text+0xb3): undefined reference to `puts'
+collect2: ld returned 1 exit status
+(exit code 1)
+Looking for a four-byte integer type... Not found.
+
+ALL = static all64
+AR = ar
+ARFLAGS = rc
+CC = gcc
+CFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+CPP = gcc -E
+EXE =
+LDCONFIG = ldconfig
+LDFLAGS =
+LDSHARED = gcc
+LDSHAREDLIBC = -lc
+OBJC = $(OBJZ)
+PIC_OBJC = $(PIC_OBJZ)
+RANLIB = ranlib
+SFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -fPIC -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+SHAREDLIB =
+SHAREDLIBM =
+SHAREDLIBV =
+STATICLIB = libz.a
+TEST = all teststatic test64
+VER = 1.2.7
+Z_U4 =
+exec_prefix = ${prefix}
+includedir = ${prefix}/include
+libdir = ${exec_prefix}/lib
+mandir = ${prefix}/share/man
+prefix = /usr/local
+sharedlibdir = ${libdir}
+uname = Linux
+--------------------
+
+
+--------------------
+./configure --static --solo
+Thu Dec  6 00:06:00 UTC 2012
+
+Checking for gcc...
+=== ztest6380.c ===
+extern int getchar();
+int hello() {return getchar();}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 ztest6380.c
+... using gcc
+
+Building static library libz.a version 1.2.7 with gcc.
+
+
+=== ztest6380.c ===
+#include <sys/types.h>
+off64_t dummy = 0;
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 ztest6380.c
+Checking for off64_t... Yes.
+Checking for fseeko... Yes.
+
+=== ztest6380.c ===
+#include <string.h>
+#include <errno.h>
+int main() { return strlen(strerror(errno)); }
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -o ztest6380 ztest6380.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccOo6IV3.o: In function `main':
+ztest6380.c:(.text+0xa): undefined reference to `__errno_location'
+ztest6380.c:(.text+0x14): undefined reference to `strerror'
+ztest6380.c:(.text+0x1c): undefined reference to `strlen'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for strerror... No.
+
+=== ztest6380.c ===
+#include <unistd.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6380.c
+Checking for unistd.h... Yes.
+
+=== ztest6380.c ===
+#include <stdarg.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6380.c
+Checking for stdarg.h... Yes.
+
+=== ztest6380.c ===
+#include <stdio.h>
+#include <stdarg.h>
+#include "zconf.h"
+int main()
+{
+#ifndef STDC
+  choke me
+#endif
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6380.c
+Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf().
+
+=== ztest6380.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return 0;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -o ztest6380 ztest6380.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccVj2ba9.o: In function `mytest':
+ztest6380.c:(.text+0x2b): undefined reference to `vsnprintf'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for vsnprintf() in stdio.h... No.
+  WARNING: vsnprintf() not found, falling back to vsprintf(). zlib
+  can build but will be open to possible buffer-overflow security
+  vulnerabilities.
+
+=== ztest6380.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  int n;
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  n = vsprintf(buf, fmt, ap);
+  va_end(ap);
+  return n;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest6380.c
+Checking for return value of vsprintf()... Yes.
+
+=== ztest6380.c ===
+#define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
+int ZLIB_INTERNAL foo;
+int main()
+{
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest6380.c
+Checking for attribute(visibility) support... Yes.
+
+=== ztest6380.c ===
+#include <stdio.h>
+#define is32(n,t) for(n=1,k=0;n;n<<=1,k++);if(k==32){puts(t);return 0;}
+int main() {
+    int k;
+    unsigned i;
+    unsigned long l;
+    unsigned short s;
+    is32(i, "unsigned")
+    is32(l, "unsigned long")
+    is32(s, "unsigned short")
+    return 1;
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN ztest6380.c -o ztest6380
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccNAnIHm.o: In function `main':
+ztest6380.c:(.text+0x3a): undefined reference to `puts'
+ztest6380.c:(.text+0x76): undefined reference to `puts'
+ztest6380.c:(.text+0xb3): undefined reference to `puts'
+collect2: ld returned 1 exit status
+(exit code 1)
+Looking for a four-byte integer type... Not found.
+
+ALL = static all64
+AR = ar
+ARFLAGS = rc
+CC = gcc
+CFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+CPP = gcc -E
+EXE =
+LDCONFIG = ldconfig
+LDFLAGS =
+LDSHARED = gcc
+LDSHAREDLIBC = -lc
+OBJC = $(OBJZ)
+PIC_OBJC = $(PIC_OBJZ)
+RANLIB = ranlib
+SFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -fPIC -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+SHAREDLIB =
+SHAREDLIBM =
+SHAREDLIBV =
+STATICLIB = libz.a
+TEST = all teststatic test64
+VER = 1.2.7
+Z_U4 =
+exec_prefix = ${prefix}
+includedir = ${prefix}/include
+libdir = ${exec_prefix}/lib
+mandir = ${prefix}/share/man
+prefix = /usr/local
+sharedlibdir = ${libdir}
+uname = Linux
+--------------------
+
+
+--------------------
+./configure --static --solo
+Thu Dec  6 00:40:14 UTC 2012
+
+Checking for gcc...
+=== ztest6747.c ===
+extern int getchar();
+int hello() {return getchar();}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 ztest6747.c
+... using gcc
+
+Building static library libz.a version 1.2.7 with gcc.
+
+
+=== ztest6747.c ===
+#include <sys/types.h>
+off64_t dummy = 0;
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 ztest6747.c
+Checking for off64_t... Yes.
+Checking for fseeko... Yes.
+
+=== ztest6747.c ===
+#include <string.h>
+#include <errno.h>
+int main() { return strlen(strerror(errno)); }
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -o ztest6747 ztest6747.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccjk25rW.o: In function `main':
+ztest6747.c:(.text+0xa): undefined reference to `__errno_location'
+ztest6747.c:(.text+0x14): undefined reference to `strerror'
+ztest6747.c:(.text+0x1c): undefined reference to `strlen'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for strerror... No.
+
+=== ztest6747.c ===
+#include <unistd.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6747.c
+Checking for unistd.h... Yes.
+
+=== ztest6747.c ===
+#include <stdarg.h>
+int main() { return 0; }
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6747.c
+Checking for stdarg.h... Yes.
+
+=== ztest6747.c ===
+#include <stdio.h>
+#include <stdarg.h>
+#include "zconf.h"
+int main()
+{
+#ifndef STDC
+  choke me
+#endif
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR ztest6747.c
+Checking whether to use vs[n]printf() or s[n]printf()... using vs[n]printf().
+
+=== ztest6747.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  return 0;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -o ztest6747 ztest6747.c
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccM62RTg.o: In function `mytest':
+ztest6747.c:(.text+0x2b): undefined reference to `vsnprintf'
+collect2: ld returned 1 exit status
+(exit code 1)
+Checking for vsnprintf() in stdio.h... No.
+  WARNING: vsnprintf() not found, falling back to vsprintf(). zlib
+  can build but will be open to possible buffer-overflow security
+  vulnerabilities.
+
+=== ztest6747.c ===
+#include <stdio.h>
+#include <stdarg.h>
+int mytest(const char *fmt, ...)
+{
+  int n;
+  char buf[20];
+  va_list ap;
+  va_start(ap, fmt);
+  n = vsprintf(buf, fmt, ap);
+  va_end(ap);
+  return n;
+}
+int main()
+{
+  return (mytest("Hello%d\n", 1));
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest6747.c
+Checking for return value of vsprintf()... Yes.
+
+=== ztest6747.c ===
+#define ZLIB_INTERNAL __attribute__((visibility ("hidden")))
+int ZLIB_INTERNAL foo;
+int main()
+{
+  return 0;
+}
+===
+gcc -c -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf ztest6747.c
+Checking for attribute(visibility) support... Yes.
+
+=== ztest6747.c ===
+#include <stdio.h>
+#define is32(n,t) for(n=1,k=0;n;n<<=1,k++);if(k==32){puts(t);return 0;}
+int main() {
+    int k;
+    unsigned i;
+    unsigned long l;
+    unsigned short s;
+    is32(i, "unsigned")
+    is32(l, "unsigned long")
+    is32(s, "unsigned short")
+    return 1;
+}
+===
+gcc -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN ztest6747.c -o ztest6747
+/usr/bin/ld: warning: cannot find entry symbol _start; defaulting to 00000000080480d8
+/tmp/ccdo4x2j.o: In function `main':
+ztest6747.c:(.text+0x3a): undefined reference to `puts'
+ztest6747.c:(.text+0x76): undefined reference to `puts'
+ztest6747.c:(.text+0xb3): undefined reference to `puts'
+collect2: ld returned 1 exit status
+(exit code 1)
+Looking for a four-byte integer type... Not found.
+
+ALL = static all64
+AR = ar
+ARFLAGS = rc
+CC = gcc
+CFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+CPP = gcc -E
+EXE =
+LDCONFIG = ldconfig
+LDFLAGS =
+LDSHARED = gcc
+LDSHAREDLIBC = -lc
+OBJC = $(OBJZ)
+PIC_OBJC = $(PIC_OBJZ)
+RANLIB = ranlib
+SFLAGS = -fno-stack-protector -fno-builtin -m32 -nostdlib -O0 -fPIC -D_LARGEFILE64_SOURCE=1 -DNO_STRERROR -DNO_vsnprintf -DHAVE_HIDDEN
+SHAREDLIB =
+SHAREDLIBM =
+SHAREDLIBV =
+STATICLIB = libz.a
+TEST = all teststatic test64
+VER = 1.2.7
+Z_U4 =
+exec_prefix = ${prefix}
+includedir = ${prefix}/include
+libdir = ${exec_prefix}/lib
+mandir = ${prefix}/share/man
+prefix = /usr/local
+sharedlibdir = ${libdir}
+uname = Linux
+--------------------
+
+

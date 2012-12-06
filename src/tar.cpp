@@ -3,6 +3,12 @@
 #include "console.hpp"
 #include "fs/tmpfs.hpp"
 
+#include "zlib.h"
+#include "zutil.h"
+#include "inftrees.h"
+#include "inflate.h"
+#include "inffast.h"
+
 namespace tar {
 
   u32 ato8(char* buf, int size) {
@@ -69,20 +75,45 @@ namespace tar {
     , size_(size)
   {}
 
+  static void* my_zalloc(void* cookie, uInt items, uInt size) {
+    return (void*)kmalloc(items * size);
+  }
+
+  static void my_zfree(void* cookie, void* addr) {
+    kfree(addr);
+  }
+
   int Archive::load_into(tmpfs::DirectoryNode* top) {
     int count = 0;
-    u8* pos = buffer_;
-    u8* fin = buffer_ + size_;
+    int ret;
 
-    while(pos < fin) {
-      Entry* ent = (Entry*)pos;
+    z_stream strm;
+    u8 out[1024];
+
+    strm.zalloc = my_zalloc;
+    strm.zfree = my_zfree;
+    strm.opaque = Z_NULL;
+    strm.avail_in = 0;
+    strm.next_in = Z_NULL;
+    ret = inflateInit2(&strm, 15 + 32);
+
+    ASSERT(ret == Z_OK);
+
+    strm.avail_in = size_;
+    strm.next_in = buffer_;
+
+    while(true) {
+      strm.avail_out = 512;
+      strm.next_out = out;
+
+      ret = inflate(&strm, Z_NO_FLUSH);
+      ASSERT(ret == Z_OK);
+
+      Entry* ent = (Entry*)out;
 
       if(ent->empty_p()) break;
 
-      // console.printf("tar: %s (%s, %d)\n", ent->name,
-                     // ent->size, ent->byte_size());
       count++;
-      pos += 512;
 
       // Now at the file data.
       //
@@ -92,16 +123,46 @@ namespace tar {
       sys::String name(ent->name);
 
       tmpfs::FileNode* node = top->create_file(name);
-
-      node->import_raw(pos, bytes);
       strcpy(node->name, ent->name);
       node->length = bytes;
 
-      console.printf("first 4 bytes: %x %x %x %x\n", pos[0], pos[1], pos[2], pos[3]);
+      u8* file = node->resize(bytes);
 
-      pos += align(bytes, 512);
+      u32 left = bytes;
+
+      while(left > 0) {
+        u32 req;
+        if(left >= 1024) {
+          req = 1024;
+        } else {
+          req = left;
+        }
+
+        strm.avail_out = req;
+        strm.next_out = file;
+
+        ret = inflate(&strm, Z_NO_FLUSH);
+        int read = req - strm.avail_out;
+
+        if(ret == Z_STREAM_END) break;
+        ASSERT(ret == Z_OK);
+
+        file += read;
+        left -= read;
+        if(strm.avail_out != 0) break;
+      }
+
+      strm.avail_out = bytes % 512;
+      strm.next_out = out;
+
+      ret = inflate(&strm, Z_NO_FLUSH);
+      ASSERT(ret == Z_OK);
     }
 
     return count;
   }
+}
+
+extern "C" void show_int(unsigned int x) {
+  console.printf("int => %d\n", x);
 }
