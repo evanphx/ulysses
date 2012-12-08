@@ -77,8 +77,6 @@ u32 Process::change_heap(int bytes) {
 }
 
 u32 Process::set_brk(u32 target) {
-  console.printf("set_brk: %p\n", target);
-
   if(!break_mapping_) {
     int flags = MemoryMapping::eAll;
     u32 addr = cDefaultBreakStart;
