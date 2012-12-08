@@ -1,3 +1,15 @@
 *.o
+*.a
 *.img
+.vagrant
+
+src/depend
 src/scratch
+src/kernel
+
+scratch
+
+sys/.libc-configured
+sys/libc
+sys/tar_disk
+sys/test
