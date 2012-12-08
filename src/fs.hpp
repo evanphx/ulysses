@@ -9,6 +9,10 @@
 #include "block.hpp"
 #include "hash_table.hpp"
 
+#include "inttypes.h"
+
+#include <stdarg.h>
+
 #define FS_FILE        0x01
 #define FS_DIRECTORY   0x02
 #define FS_CHARDEVICE  0x03
@@ -20,8 +24,10 @@
 #define MAXNAMLEN 255
 
 struct dirent {
-  int d_ino;
+  ino_t d_ino;
+  off_t d_off;
   unsigned short int d_reclen;
+  unsigned char d_type;
   char d_name[];
 };
 
@@ -58,6 +64,7 @@ namespace fs {
     virtual Node* finddir(const char* name, int len) { return 0; }
     virtual Node* create_file(sys::String& str) { return 0; }
     virtual int get_entries(int offset, void* dp, int count) { return -1; }
+    virtual int ioctl(unsigned long req, va_list args) { return -1; }
   };
 
   // An open file used by a process.
@@ -71,6 +78,7 @@ namespace fs {
     s32 write(u8* buffer, u32 size);
     void seek(int pos, int whence);
     int get_entries(void* dp, int count);
+    int ioctl(unsigned long req, ...);
   };
 
   class Registry;

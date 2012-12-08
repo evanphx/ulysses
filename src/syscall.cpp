@@ -46,6 +46,8 @@ SYSCALL(17, exec, Registers* regs) {
   regs->cs = segments::cUserCS;
   regs->useresp = req.new_esp;
 
+  console.printf("ready to execute '%s' at %p...\n", path, regs->eip);
+
   return 0;
 }
 
@@ -65,6 +67,7 @@ SYSCALL(3, pause) {
 }
 
 SYSCALL(4, exit, int code) {
+  console.printf("exit called\n");
   scheduler.exit(code);
   return 0;
 }
@@ -94,7 +97,7 @@ SYSCALL(8, read, int fd, char* buffer, int size) {
   }
 }
 
-SYSCALL(11, write, int fd, int size, char* buffer) {
+SYSCALL(11, write, int fd, char* buffer, int size) {
   if(fs::File* file = scheduler.process()->get_file(fd)) {
     if(size == 0) return 0;
     if(size < 0) return -1;
@@ -124,6 +127,10 @@ SYSCALL(12, sbrk, int bytes) {
   return addr;
 }
 
+SYSCALL(21, brk, u32 target) {
+  return (int)scheduler.process()->set_brk(target);
+}
+
 SYSCALL(13, getdents, int fd, void* dp, int count) {
   if(fs::File* file = scheduler.process()->get_file(fd)) {
     return file->get_entries(dp, count);
@@ -142,6 +149,37 @@ SYSCALL(15, channel_create) {
 
 SYSCALL(16, msg_recv, int cid, void* msg, int len) {
   return -1; // ipc::msg_recv(cid, msg, len);
+}
+
+SYSCALL(18, notimpl) {
+  console.printf("Unimplemented syscall used\n");
+  return -1;
+}
+
+struct iovec { void *base; u32 len; };
+
+SYSCALL(19, writev, int fd, struct iovec* vec, int veccnt) {
+  if(fs::File* file = scheduler.process()->get_file(fd)) {
+
+    int out = 0;
+    for(int i = 0; i < veccnt; i++) {
+      out += file->write((u8*)vec[i].base, vec[i].len);
+    }
+
+    return out;
+  } else {
+    console.printf("unable to find fd %d\n", fd);
+    return -1;
+  }
+  return -1;
+}
+
+SYSCALL(20, ioctl, int fd, unsigned long req, unsigned long arg) {
+  if(fs::File* file = scheduler.process()->get_file(fd)) {
+    return file->ioctl(req, arg);
+  } else {
+    return -1;
+  }
 }
 
 const char* syscall_name(int idx);

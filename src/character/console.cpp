@@ -15,6 +15,10 @@ namespace console_driver {
     return size;
   }
 
+  int ConsoleDevice::ioctl(unsigned long req, va_list args) {
+    return 0;
+  }
+
   void init() {
     ConsoleDevice* dev = new(kheap) ConsoleDevice;
     devfs::main.add_char_device(dev, "console");

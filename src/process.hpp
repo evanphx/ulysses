@@ -16,6 +16,9 @@ public:
     cTotal = 2
   };
 
+  const static u32 cDefaultBreakStart = 0x2000000;
+  const static u32 cDefaultBreakSize  = 1024 * 1024;
+
   typedef sys::List<Process, cAll> AllList;
   typedef sys::List<Process, cCleanup> CleanupList;
 
@@ -73,6 +76,7 @@ public:
                 u32 mem_size, int flags);
   MemoryMapping* find_mapping(u32 addr);
   u32 change_heap(int bytes);
+  u32 set_brk(u32 target);
 
   int open_file(const char* name, int mode);
   fs::File* get_file(int fd);

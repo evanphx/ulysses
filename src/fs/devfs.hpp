@@ -32,6 +32,10 @@ namespace devfs {
     Node* finddir(const char* name, int len) {
       return 0;
     }
+
+    int ioctl(unsigned long req, va_list args) {
+      return char_dev->ioctl(req, args);
+    }
   };
 
   class RegisteredFS : public fs::RegisteredFS {

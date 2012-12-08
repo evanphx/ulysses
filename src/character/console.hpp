@@ -14,6 +14,7 @@ namespace console_driver {
   class ConsoleDevice : public character::Device {
     u32 read_bytes(u32 offset, u32 size, u8* buffer);
     u32 write_bytes(u32 offset, u32 size, u8* buffer);
+    int ioctl(unsigned long req, va_list args);
   };
 
   void init();

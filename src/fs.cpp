@@ -51,6 +51,17 @@ namespace fs {
     return entries;
   }
 
+  int File::ioctl(unsigned long req, ...) {
+    va_list ap;
+    va_start(ap, req);
+
+    int ret = node_->ioctl(req, ap);
+
+    va_end(ap);
+
+    return ret;
+  }
+
   Node* lookup(const char* name, int len, fs::Node* dir) {
     int sub_len = 0;
     while(sub_len < len) {

@@ -54,7 +54,9 @@ MemoryMapping* Process::find_mapping(u32 addr) {
   while(i.more_p()) {
     MemoryMapping& mmap = i.advance();
 
-    if(mmap.contains_p(addr)) return &mmap;
+    if(mmap.contains_p(addr)) {
+      return &mmap;
+    }
   }
 
   return 0;
@@ -72,6 +74,43 @@ u32 Process::change_heap(int bytes) {
   u32 ret = break_mapping_->end_address();
   break_mapping_->enlarge_mem_size(bytes);
   return ret;
+}
+
+u32 Process::set_brk(u32 target) {
+  console.printf("set_brk: %p\n", target);
+
+  if(!break_mapping_) {
+    int flags = MemoryMapping::eAll;
+    u32 addr = cDefaultBreakStart;
+    u32 bytes = 0;
+
+    if(target == 0) {
+      bytes = 0;
+      target = addr;
+    } else if(target < addr) {
+      console.printf("ignoring request to reduce brk %p < %p\n", target, addr);
+      return target;
+    } else {
+      bytes = (u32)target - addr;
+    }
+
+    MemoryMapping mapping(addr, bytes, 0, 0, 0, flags);
+    break_mapping_ = &mmaps_.append(mapping);
+    return target;
+  }
+
+  if(target == 0) {
+    return cDefaultBreakStart;
+  } else if(target < break_mapping_->end_address()) {
+    console.printf("ignoring request to reduce brk %p < %p\n",
+                   target, break_mapping_->end_address());
+    return target;
+  }
+
+  u32 ret = break_mapping_->end_address();
+  break_mapping_->enlarge_mem_size(target - ret);
+  return target;
+
 }
 
 void Process::exit(int code) {

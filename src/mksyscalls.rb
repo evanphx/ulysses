@@ -13,7 +13,7 @@ class Syscall
 
   def arg_types
     @args.map { |arg|
-      arg.split(/\s+/)[0..-2].join(" ")
+      arg == "..." ? arg : arg.split(/\s+/)[0..-2].join(" ")
     }
   end
 
@@ -27,7 +27,7 @@ class Syscall
 
   def arg_regs
     REGS[0, num_args].zip(arg_types).map { |i,t|
-      "(#{t})regs->#{i}"
+      t == "..." ? "regs->#{i}" : "(#{t})regs->#{i}"
     }.join(", ")
   end
 
