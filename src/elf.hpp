@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "fs.hpp"
 #include "paging.hpp"
+#include "process.hpp"
 
 namespace elf {
 
@@ -177,23 +178,60 @@ namespace elf {
     const char** argv;
     const char** env;
     fs::Node* node;
-    u32 new_esp;
-    u32 target_ip;
 
     Request(const char* p, const char** a, const char** e)
       : path(p)
       , argv(a)
       , env(e)
       , node(0)
-      , new_esp(0)
-      , target_ip(0)
     {}
 
     bool load_file();
   };
 
-  bool load_node(Request& req);
+  struct TableInfo {
+    const char** table;
+    u32 table_size;
+    u32 bytes;
+    u32 entries;
 
+    TableInfo(const char**);
+
+    u32 total_size() {
+      return table_size + bytes;
+    }
+  };
+
+  class Loader {
+    Request& req_;
+    u32 new_esp_;
+    u32 target_ip_;
+
+  public:
+    Loader(Request& req);
+    bool load_into(Process* proc);
+
+  public:
+    u32 target_ip() {
+      return target_ip_;
+    }
+
+    u32 new_esp() {
+      return new_esp_;
+    }
+
+    u32 stack_top() {
+      return KERNEL_VIRTUAL_BASE;
+    }
+
+  private:
+    Header* load_header();
+    void map_memory(Header* hdr, Process* proc);
+    void setup_args();
+
+    void allocate_pages_for_header(u32 bytes);
+    char** copy_string_table(u32 target, TableInfo& tbl);
+  };
 }
 
 #endif

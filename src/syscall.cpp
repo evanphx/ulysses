@@ -34,17 +34,19 @@ SYSCALL(17, exec, Registers* regs) {
     return 0;
   }
 
-  if(!elf::load_node(req)) {
+  elf::Loader loader(req);
+
+  if(!loader.load_into(scheduler.process())) {
     regs->eax = -1;
     return 0;
   }
 
   regs->eax = 0;
-  regs->eip = req.target_ip;
+  regs->eip = loader.target_ip();
   regs->ds = segments::cUserDS;
   regs->ss = segments::cUserDS;
   regs->cs = segments::cUserCS;
-  regs->useresp = req.new_esp;
+  regs->useresp = loader.new_esp();
 
   console.printf("ready to execute '%s' at %p...\n", path, regs->eip);
 

@@ -7,6 +7,8 @@
 #include "thread.hpp"
 #include "scheduler.hpp"
 
+#include "own.hpp"
+
 namespace elf {
 
   bool Header::validate() {
@@ -33,141 +35,172 @@ namespace elf {
     return (ProgramHeader*)buffer;
   }
 
-  static u32 count_table(const char** tbl, u32* total) {
-    u32 count = 0;
-    u32 tot = 0;
+  TableInfo::TableInfo(const char** tbl)
+    : table(tbl)
+    , bytes(0)
+  {
+    u32 i = 0;
 
-    while(*tbl) {
-      tot++;
-      count += sizeof(char*); // the pointer itself
-      count += strlen(*tbl); // the data at the pointer
-      count += 1; // a null
-      tbl++;
+    while(true) {
+      const char* str = tbl[i];
+      if(!str) break;
+
+      bytes += (strlen(str) + 1);  // +1 for the NULL too
+
+      i++;
     }
 
-    count += sizeof(char*); // for the null at the end
-
-    *total = tot;
-    return count;
+    entries = i;
+    table_size = sizeof(char*) * (entries + 1);
   }
 
-  bool load_node(Request& req) {
-    if(req.node->length < sizeof(Header)) {
+  Loader::Loader(Request& req)
+    : req_(req)
+    , new_esp_(0)
+    , target_ip_(0)
+  {}
+
+  Header* Loader::load_header() {
+    if(req_.node->length < sizeof(Header)) {
       console.printf("Invalid elf header.\n");
-      return false;
+      return 0;
     }
 
     u8* buffer = (u8*)kmalloc(sizeof(Header));
-    req.node->read(0, sizeof(Header), buffer);
+    req_.node->read(0, sizeof(Header), buffer);
 
     Header* hdr = (Header*)buffer;
 
     if(!hdr->validate()) {
       console.printf("Invalid elf header.\n");
       kfree(buffer);
-      return false;
+      return 0;
     }
 
-    if(hdr->e_phnum > 0) {
-      ProgramHeader* first_ph = hdr->load_ph(req.node);
-      ProgramHeader* ph = first_ph;
+    return hdr;
+  }
 
-      for(int i = 0; i < hdr->e_phnum; i++) {
-        if(ph->load_p()) {
-          scheduler.process()->add_mmap(req.node, ph->p_offset, ph->p_filesz,
-                                      ph->p_vaddr, ph->p_memsz,
-                                      ph->mmap_flags());
-        }
-        ph++;
+  void Loader::map_memory(Header* hdr, Process* proc) {
+    own<ProgramHeader*> first_ph = hdr->load_ph(req_.node);
+    ProgramHeader* ph = first_ph;
+
+    for(int i = 0; i < hdr->e_phnum; i++) {
+      if(ph->load_p()) {
+        proc->add_mmap(req_.node, ph->p_offset, ph->p_filesz,
+                                    ph->p_vaddr, ph->p_memsz,
+                                    ph->mmap_flags());
       }
-
-      kfree(first_ph);
+      ph++;
     }
+  }
 
-    u32 argc, envc;
-
-    u32 arg_bytes = count_table(req.argv, &argc);
-    u32 env_bytes = count_table(req.env,  &envc);
-
-    u32 header_bytes = arg_bytes + env_bytes + sizeof(u32)
-                     + (sizeof(char**) * 2);
-
-    header_bytes = align(header_bytes, 16);
-
-    u32 pages = cpu::page_align(header_bytes) / cpu::cPageSize;
+  void Loader::allocate_pages_for_header(u32 bytes) {
+    u32 top = stack_top();
+    u32 pages = cpu::page_align(bytes) / cpu::cPageSize;
 
     // Allocate frames for the memory and map it.
     for(u32 i = 1; i <= pages; i++) {
-      u32 addr = KERNEL_VIRTUAL_BASE - (i * cpu::cPageSize);
+      u32 addr = top - (i * cpu::cPageSize);
       x86::Page* p = vmem.get_current_page(addr, 1);
       vmem.alloc_user_frame(p, true);
     }
+  }
 
-    u32 data = KERNEL_VIRTUAL_BASE - arg_bytes - env_bytes;
+  char** Loader::copy_string_table(u32 top, TableInfo& tbl) {
+    char** table = (char**)(top - tbl.table_size);
 
-    // Copy env
-    u32 bytes_only = env_bytes - (sizeof(char*) * (argc + 1));
+    char* pos = (char*)(top - tbl.table_size - tbl.bytes);
 
-    u8* bytes = (u8*)data;
+    u32 size = tbl.entries;
 
-    u8** env_tbl = (u8**)(bytes + bytes_only);
-
-    for(u32 i = 0; i < envc; i++) {
-      const char* str = req.env[i];
+    for(u32 i = 0; i < size; i++) {
+      const char* str = tbl.table[i];
       int str_len = strlen(str) + 1;  // +1 for the NULL too
-      memcpy(bytes, (const u8*)str, str_len);
+      memcpy((u8*)pos, (const u8*)str, str_len);
 
-      env_tbl[i] = bytes;
-      bytes += str_len;
+      table[i] = pos; 
+
+      pos += str_len;
     }
 
-    env_tbl[envc] = 0;
+    table[size] = 0;
 
-    data += env_bytes;
+    return table;
+  }
 
-    // Copy args
-    bytes_only = arg_bytes - (sizeof(char*) * (argc + 1));
+  struct stack_layout {
+    u32* ret_addr;
+    u32  argc;
+    char** argv;
+    char** environ;
+  };
 
-    bytes = (u8*)data;
+  /*
+  Layout on stack (high addresses to low addresses)
+  
+  ptr(env_s1) \
+  ptr(env_s2) | pointer table
+  ...         |
+  ptr(env_sn) / <- environ
+  env_sn \
+  ...    | data
+  env_s2 |
+  env_s1 /
+  ptr(argv_s1) \
+  ptr(argv_s2) | pointer table
+  ...          |
+  ptr(argv_sn) / <- argv
+  argv_sn \
+  ...     | data
+  argv_s2 |
+  argv_s1 /
+  ptr(ptr(env_s1)) aka environ
+  ptr(ptr(argv_s1)) aka argv
+  argc
+  ret_addr
+  */
 
-    u8** arg_tbl = (u8**)(bytes + bytes_only);
+  void Loader::setup_args() {
+    TableInfo env(req_.env);
+    TableInfo argv(req_.argv);
 
-    for(u32 i = 0; i < argc; i++) {
-      const char* str = req.argv[i];
-      int str_len = strlen(str) + 1;  // +1 for the NULL too
-      memcpy(bytes, (const u8*)str, str_len);
+    u32 top = stack_top();
 
-      arg_tbl[i] = bytes;
-      bytes += str_len;
-    }
+    u32 header_bytes = env.total_size() + argv.total_size() +
+                       sizeof(u32) + (sizeof(char**) + 2);
 
-    arg_tbl[argc] = 0;
+    header_bytes = align(header_bytes, 16);
 
-    data += arg_bytes;
+    allocate_pages_for_header(header_bytes);
 
-    req.new_esp = KERNEL_VIRTUAL_BASE - header_bytes;
+    char** env_tbl = copy_string_table(top, env);
+    char** arg_tbl = copy_string_table(top - env.total_size(), argv);
+
+    new_esp_ = top - header_bytes;
 
     // now the stack args that the program will see
-    u32 arg_start = req.new_esp;
+    stack_layout* layout = (stack_layout*)new_esp_;
 
-    // No return value
-    *((u32*)arg_start) = 0;
-    arg_start += sizeof(void*);
+    layout->ret_addr = 0;
+    layout->argc = argv.entries;
+    layout->argv = arg_tbl;
+    layout->environ = env_tbl;
+  }
 
-    *((u32*)arg_start) = argc;
-    arg_start += sizeof(u32*);
+  bool Loader::load_into(Process* proc) {
+    Header* hdr = load_header();
+    if(!hdr) return false;
 
-    *((u8***)arg_start) = arg_tbl;
-    arg_start += sizeof(u32*);
+    if(hdr->e_phnum > 0) map_memory(hdr, proc);
 
-    *((u8***)arg_start) = env_tbl;
+    setup_args();
 
-    u32 stack_fin = KERNEL_VIRTUAL_BASE - USER_STACK_SIZE;
+    u32 stack_fin = stack_top() - USER_STACK_SIZE;
 
     scheduler.process()->add_mmap(0, 0, 0, stack_fin, USER_STACK_SIZE,
                                 MemoryMapping::eAll);
 
-    req.target_ip = hdr->e_entry;
+    target_ip_ = hdr->e_entry;
 
     return true;
   }
