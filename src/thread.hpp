@@ -50,9 +50,10 @@ public:
 
 private:
   Process* process_;
+  int id_;
 
 public:
-  Thread(Process* process);
+  Thread(Process* process, int id);
 
 public:
   SavedRegisters regs;
@@ -65,6 +66,10 @@ public:
   sys::ListNode<Thread> lists[cTotal];
 
 public:
+  int id() {
+    return id_;
+  }
+
   bool dead() {
     return state == eDead;
   }

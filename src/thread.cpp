@@ -11,8 +11,9 @@
 
 #include "scheduler.hpp"
 
-Thread::Thread(Process* process)
+Thread::Thread(Process* process, int id)
   : process_(process)
+  , id_(id)
   , alarm_at(0)
 {}
 

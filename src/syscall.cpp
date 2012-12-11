@@ -69,7 +69,11 @@ SYSCALL(3, pause) {
 }
 
 SYSCALL(4, exit, int code) {
-  console.printf("exit called\n");
+  scheduler.exit(code);
+  return 0;
+}
+
+SYSCALL(22, exit_group, int code) {
   scheduler.exit(code);
   return 0;
 }
@@ -153,8 +157,8 @@ SYSCALL(16, msg_recv, int cid, void* msg, int len) {
   return -1; // ipc::msg_recv(cid, msg, len);
 }
 
-SYSCALL(18, notimpl) {
-  console.printf("Unimplemented syscall used\n");
+SYSCALL(18, notimpl, Registers* regs) {
+  console.printf("Unimplemented syscall used from %p\n", regs->eip);
   return -1;
 }
 

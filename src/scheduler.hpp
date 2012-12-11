@@ -3,27 +3,30 @@
 
 #include "thread.hpp"
 #include "process.hpp"
+#include "constants.hpp"
+#include "common.hpp"
 
 class Scheduler {
 public:
-  u32 next_pid;
   Thread* current;
-  Thread* task0;
 
-  Thread::RunList ready_queue;
   Thread::RunList waiting_queue;
 
 private:
-  Process::AllList processes_;
+  Process* processes_[constants::cMaxProcesses];
   Process::CleanupList cleanup_;
+  Thread::RunList ready_queue_;
+  Thread* idle_thread_;
 
 public:
 
   void init();
 
+  int new_pid();
+
   void make_ready(Thread* task) {
     task->state = Thread::eReady;
-    ready_queue.prepend(task);
+    ready_queue_.prepend(task);
   }
 
   void make_wait(Thread* task) {
@@ -36,7 +39,7 @@ public:
   }
 
   void remove_from_ready(Thread* thr) {
-    ready_queue.unlink(thr);
+    ready_queue_.unlink(thr);
   }
 
   void remove_from_waiting(Thread* thr) {
@@ -48,6 +51,7 @@ public:
   int fork();
 
   int spawn_thread(void (*func)(void));
+  int spawn_init(void (*func)(void));
 
   void exit(int code);
   void sleep(int secs);

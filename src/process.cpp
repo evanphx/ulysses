@@ -12,6 +12,7 @@
 Process::Process(int pid)
   : pid_(pid)
   , break_mapping_(0)
+  , thread_ids_(0)
 {
   for(int i = 0; i < 16; i++) {
     fds_[i] = 0;
@@ -20,6 +21,8 @@ Process::Process(int pid)
   for(int i = 0; i < 16; i++) {
     channels_[i] = 0;
   }
+
+  threads_.init();
 }
 
 void Process::add_mmap(fs::Node* node, u32 offset, u32 size, u32 addr,
@@ -115,9 +118,15 @@ void Process::exit(int code) {
   alive_ = false;
   exit_code_ = code;
 
-  Thread::ProcessList::Iterator i = threads_.begin();
+  auto i = threads_.begin();
 
   while(i.more_p()) {
-    i.advance()->die();
+    Thread* t = i.advance();
+    ASSERT(t->process() == this);
+    t->die();
   }
+}
+
+Thread* Process::new_thread(void* placed) {
+  return new(placed) Thread(this, thread_ids_++);
 }

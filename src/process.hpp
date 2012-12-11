@@ -5,6 +5,7 @@
 #include "paging.hpp"
 #include "list.hpp"
 #include "fs.hpp"
+#include "list.hpp"
 
 class Process {
 public:
@@ -25,7 +26,7 @@ public:
   sys::ListNode<Process> lists[cTotal];
 
 private:
-  Thread::ProcessList threads_;
+  sys::ExternalList<Thread*> threads_;
   int pid_;
 
   MMapList mmaps_;
@@ -37,6 +38,8 @@ private:
 
   bool alive_;
   int exit_code_;
+
+  int thread_ids_;
 
 public:
   x86::PageDirectory* directory;
@@ -80,6 +83,8 @@ public:
 
   int open_file(const char* name, int mode);
   fs::File* get_file(int fd);
+
+  Thread* new_thread(void* placed);
 };
 
 #endif

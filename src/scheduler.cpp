@@ -20,30 +20,33 @@ void Scheduler::init() {
   // Rather important stuff happening, no interrupts please!
   cpu::disable_interrupts();
 
-  next_pid = 0;
   current = 0;
 
-  processes_.init();
+  for(int i = 0; i < constants::cMaxProcesses; i++) {
+    processes_[0] = 0;
+  }
+
   cleanup_.init();
 
-  ready_queue.init();
+  ready_queue_.init();
   waiting_queue.init();
 
   // Initialise the first thread (kernel thread)
   u32 mem = (u32)&initial_task;
 
-  Process* proc = new(kheap) Process(next_pid++);
+  // Create process 0, the idle process.
+  Process* proc = new(kheap) Process(0);
   proc->directory = vmem.current_directory;
 
-  processes_.append(proc);
+  processes_[proc->pid()] = proc;
   
-  current = new((void*)mem) Thread(proc);
+  current = proc->new_thread((void*)mem);
   current->directory = vmem.current_directory;
   current->kernel_stack = mem + KERNEL_STACK_SIZE;
 
-  task0 = current;
+  current->state = Thread::eReady;
 
-  make_ready(current);
+  idle_thread_ = current;
 
   // Reenable interrupts.
   cpu::enable_interrupts();
@@ -55,7 +58,7 @@ void Scheduler::cleanup() {
   while(i.more_p()) {
     Process* proc = i.advance();
     cleanup_.unlink(proc);
-    processes_.unlink(proc);
+    processes_[proc->pid()] = 0;
 
     vmem.free_directory(proc->directory);
 
@@ -94,22 +97,21 @@ void Scheduler::switch_task() {
   // Have we just switched tasks?
   if(val == &second_return) return;
 
-  // Get the next task to run.
-  Thread* next = current->next_runnable();
+  Thread* next = 0;
 
-  // If we fell off the end of the linked list start again at the beginning.
-  if(!next) {
-    if(ready_queue.count() == 0) {
-      console.printf("NO Threads TO RUN\n");
-      kabort();
-    }
-
-    next = ready_queue.head();
+  if(ready_queue_.count() == 0) {
+    next = idle_thread_;
+  } else {
+    next = ready_queue_.head();
   }
 
   ASSERT(next);
 
   if(next == current) return;
+
+  // Move it to the end
+  ready_queue_.unlink(next);
+  ready_queue_.append(next);
 
   current = next;
 
@@ -131,9 +133,9 @@ void Scheduler::exit(int code) {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
 
-  ASSERT(current != task0);
+  ASSERT(getpid() != 0);
 
-  ready_queue.unlink(current);
+  ready_queue_.unlink(current);
 
   process()->exit(code);
   cleanup_.prepend(current->process());
@@ -158,9 +160,9 @@ void Scheduler::sleep(int secs) {
 
   current->sleep_til(secs);
 
-  ASSERT(current != task0);
+  ASSERT(getpid() != 0);
 
-  ready_queue.unlink(current);
+  ready_queue_.unlink(current);
   make_wait(current);
 
   cpu::restore_interrupts(st);
@@ -174,9 +176,9 @@ void Scheduler::io_wait() {
 
   current->state = Thread::eIOWait;
 
-  ASSERT(current != task0);
+  ASSERT(getpid() != 0);
 
-  ready_queue.unlink(current);
+  ready_queue_.unlink(current);
 
   cpu::enable_interrupts();
 
@@ -195,19 +197,19 @@ int Scheduler::fork() {
   x86::PageDirectory* directory = vmem.clone_current();
 
   // Create a new process.
-  Process* proc = new(kheap) Process(next_pid++);
-  processes_.append(proc);
+  Process* proc = new(kheap) Process(new_pid());
+  processes_[proc->pid()] = proc;
 
   proc->directory = directory;
 
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
-  Thread* new_task = new((void*)mem) Thread(proc);
+  Thread* new_task = proc->new_thread((void*)mem);
   new_task->directory = directory;
 
   new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
 
-  ready_queue.append(new_task);
+  make_ready(new_task);
 
   if(save_registers(&new_task->regs) != &second_return) {
     // All finished: Reenable interrupts.
@@ -221,6 +223,38 @@ int Scheduler::fork() {
   }
 }
 
+int Scheduler::spawn_init(void (*func)(void)) {
+  // We are modifying kernel structures, and so cannot be interrupted.
+  int st = cpu::disable_interrupts();
+
+  x86::PageDirectory* directory = vmem.new_directory();
+
+  // Create a new process.
+  Process* proc = new(kheap) Process(1);
+  processes_[1] = proc;
+
+  proc->directory = directory;
+
+  u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
+
+  Thread* new_task = proc->new_thread((void*)mem);
+  new_task->directory = directory;
+  new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
+
+  proc->add_thread(new_task);
+
+  make_ready(new_task);
+
+  save_registers(&new_task->regs);
+  new_task->regs.eip = (u32)func;
+  new_task->regs.esp = new_task->kernel_stack;
+
+  // All finished: Reenable interrupts.
+  cpu::restore_interrupts(st);
+
+  return proc->pid();
+}
+
 int Scheduler::spawn_thread(void (*func)()) {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
@@ -231,11 +265,11 @@ int Scheduler::spawn_thread(void (*func)()) {
   // Create a new process.
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
-  Thread* new_task = new((void*)mem) Thread(process());
+  Thread* new_task = process()->new_thread((void*)mem);
   new_task->directory = directory;
   new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
 
-  ready_queue.append(new_task);
+  make_ready(new_task);
 
   save_registers(&new_task->regs);
   new_task->regs.eip = (u32)func;
@@ -247,6 +281,19 @@ int Scheduler::spawn_thread(void (*func)()) {
   // And by convention return the PID of the child.
   return process()->pid();
 }
+
+
+int Scheduler::new_pid() {
+  for(int i = 0; i < constants::cMaxProcesses; i++) {
+    if(!processes_[i]) return i;
+  }
+
+  kputs("no more room for procesess!");
+  kabort();
+
+  return 0; // compiler snack
+}
+
 
 int Scheduler::getpid() {
   return process()->pid();

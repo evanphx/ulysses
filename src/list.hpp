@@ -8,6 +8,13 @@ namespace sys {
   struct ListNode {
     T* next;
     T* prev;
+    bool linked;
+
+    ListNode()
+      : next(0)
+      , prev(0)
+      , linked(false)
+    {}
   };
 
   template <typename T, int which=0>
@@ -36,9 +43,10 @@ namespace sys {
     }
 
     void unlink(T* elem) {
-      count_--;
-
       ListNode<T>& node = elem->lists[which];
+
+      // Already unlinked
+      if(!node.linked) return;
 
       if(node.next) {
         node.next->lists[which].prev = node.prev;
@@ -55,11 +63,19 @@ namespace sys {
       if(elem == tail_) {
         tail_ = node.prev;
       }
+
+      node.linked = false;
+      node.next = node.prev = 0;
+
+      count_--;
     }
 
     void append(T* elem) {
       ListNode<T>& node = elem->lists[which];
 
+      if(node.linked) return;
+
+      node.linked = true;
       count_++;
 
       if(tail_) {
@@ -76,6 +92,9 @@ namespace sys {
     void prepend(T* elem) {
       ListNode<T>& node = elem->lists[which];
 
+      if(node.linked) return;
+
+      node.linked = true;
       count_++;
 
       if(head_) {
@@ -139,6 +158,9 @@ namespace sys {
       , tail_(0)
       , count_(0)
     {}
+
+    // For API compat with List
+    void init() { }
 
     T& head() {
       return head_->elem;

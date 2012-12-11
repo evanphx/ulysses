@@ -290,6 +290,32 @@ void VirtualMemory::free_table(x86::PageTable* src) {
   kfree(src);
 }
 
+x86::PageDirectory* VirtualMemory::new_directory() {
+  u32 phys;
+  // Make a new page directory and obtain its physical address.
+  x86::PageDirectory* dir = knew_phys<x86::PageDirectory>(&phys);
+  // Ensure that it is blank.
+  memset((u8int*)dir, 0, sizeof(x86::PageDirectory));
+
+  // Get the offset of tablesPhysical from the start of the page_directory
+  // structure.
+  u32 offset = (u32)dir->tablesPhysical - (u32)dir;
+
+  // Then the physical address of dir->tablesPhysical is:
+  dir->physicalAddr = phys + offset;
+
+  // Now copy the pointers over from the kernel directory because
+  // they're constant.
+  for(int i = 0; i < 1024; i++) {
+    if(kernel_directory->tables[i]) {
+      dir->tables[i] = kernel_directory->tables[i];
+      dir->tablesPhysical[i] = kernel_directory->tablesPhysical[i];
+    }
+  }
+
+  return dir;
+}
+
 x86::PageDirectory* VirtualMemory::clone_directory(x86::PageDirectory* src) {
   u32 phys;
   // Make a new page directory and obtain its physical address.

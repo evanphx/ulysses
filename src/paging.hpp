@@ -162,6 +162,7 @@ struct VirtualMemory {
   x86::Page* get_current_page(u32 address, int make);
   x86::PageDirectory* clone_directory(x86::PageDirectory* src);
   x86::PageDirectory* clone_current();
+  x86::PageDirectory* new_directory();
 
   void free_table(x86::PageTable* tbl);
   void free_directory(x86::PageDirectory* dir);

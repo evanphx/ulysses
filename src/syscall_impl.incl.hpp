@@ -15,7 +15,7 @@ DEFN_SYSCALL3(getdents, 13, int, void*, int);
 DEFN_SYSCALL2(channel_connect, 14, int, int);
 DEFN_SYSCALL0(channel_create, 15);
 DEFN_SYSCALL3(msg_recv, 16, int, void*, int);
-DEFN_SYSCALL0(notimpl, 18);
 DEFN_SYSCALL3(writev, 19, int, struct iovec*, int);
 DEFN_SYSCALL3(ioctl, 20, int, unsigned long, unsigned long);
 DEFN_SYSCALL1(brk, 21, u32);
+DEFN_SYSCALL1(exit_group, 22, int);

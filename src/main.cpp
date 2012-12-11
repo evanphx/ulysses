@@ -109,7 +109,7 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
 
   // block::registry.print();
 
-  scheduler.spawn_thread(run_init);
+  scheduler.spawn_init(run_init);
 
   // The idle task code. Reschedule forever and let
   // the cpu sleep between interrupts.

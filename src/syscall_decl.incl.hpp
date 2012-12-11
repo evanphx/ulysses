@@ -15,7 +15,7 @@ DECL_SYSCALL3(getdents, int, void*, int);
 DECL_SYSCALL2(channel_connect, int, int);
 DECL_SYSCALL0(channel_create);
 DECL_SYSCALL3(msg_recv, int, void*, int);
-DECL_SYSCALL0(notimpl);
 DECL_SYSCALL3(writev, int, struct iovec*, int);
 DECL_SYSCALL3(ioctl, int, unsigned long, unsigned long);
 DECL_SYSCALL1(brk, u32);
+DECL_SYSCALL1(exit_group, int);

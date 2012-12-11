@@ -90,7 +90,7 @@ void _syscall_tramp_exec(Registers* regs) {
 }
 void _syscall_tramp_notimpl(Registers* regs) {
   TRACE_START_SYSCALL(18);
-  regs->eax = SYSCALL_NAME(notimpl)();
+  SYSCALL_NAME(notimpl)(regs);
   TRACE_END_SYSCALL(18);
 }
 void _syscall_tramp_writev(Registers* regs) {
@@ -107,6 +107,11 @@ void _syscall_tramp_brk(Registers* regs) {
   TRACE_START_SYSCALL(21);
   regs->eax = SYSCALL_NAME(brk)((u32)regs->ebx);
   TRACE_END_SYSCALL(21);
+}
+void _syscall_tramp_exit_group(Registers* regs) {
+  TRACE_START_SYSCALL(22);
+  regs->eax = SYSCALL_NAME(exit_group)((int)regs->ebx);
+  TRACE_END_SYSCALL(22);
 }
 static void* syscalls[] = {
   (void*)&_syscall_tramp_kprint,
@@ -131,9 +136,10 @@ static void* syscalls[] = {
   (void*)&_syscall_tramp_writev,
   (void*)&_syscall_tramp_ioctl,
   (void*)&_syscall_tramp_brk,
+  (void*)&_syscall_tramp_exit_group,
   0
 };
-const static u32 num_syscalls = 22;
+const static u32 num_syscalls = 23;
 static const char* syscall_names[] = {
   "kprint",
   "fork",
@@ -157,5 +163,6 @@ static const char* syscall_names[] = {
   "writev",
   "ioctl",
   "brk",
+  "exit_group",
   0
 };

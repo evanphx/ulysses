@@ -150,6 +150,7 @@ int main(int argc, char** argv, char** environ) {
   /* kputs("test 2\n"); */
   /* test_read_file(); */
 
+  printf("exit 0\n");
   exit(1);
 
   return;
