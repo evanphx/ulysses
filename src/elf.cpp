@@ -35,6 +35,27 @@ namespace elf {
     return (ProgramHeader*)buffer;
   }
 
+  Section* Header::find_section(u8* buffer, const char* name) {
+    Section* sections = (Section*)(buffer + e_shoff);
+
+    console.printf("%d <=> %d\n", sizeof(Section), e_shentsize);
+
+    ASSERT(sizeof(Section) == e_shentsize);
+
+    Section* strtab = sections + e_shstrndx;
+
+    char* strings = (char*)buffer + strtab->sh_offset;
+
+    for(u16 i = 0; i < e_shnum; i++) {
+      Section* sec = (Section*)sections;
+      char* s = (char*)(strings + sec->sh_name);
+      console.printf("Considering section '%s'\n", s);
+      if(strcmp(s, name) == 0) return sec;
+    }
+
+    return 0;
+  }
+
   TableInfo::TableInfo(const char** tbl)
     : table(tbl)
     , bytes(0)

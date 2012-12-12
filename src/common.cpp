@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "monitor.hpp"
 #include "cpu.hpp"
+#include "inspector.hpp"
 
 extern "C" {
 
@@ -136,6 +137,8 @@ extern void panic(const char *message, const char *file, u32 line)
 
     console.printf("PANIC(%s) at %s:%d\n", message, file, line);
 
+    inspector.print_backtrace();
+
     // Halt by going into an infinite loop.
     cpu::halt_loop();
 }
@@ -147,6 +150,8 @@ extern void panic_assert(const char *file, u32 line, const char *desc)
 
     console.printf("ASSERTION-FAILED(%s) at %s:%d\n", desc, file, line);
 
+    inspector.print_backtrace();
+
     // Halt by going into an infinite loop.
     cpu::halt_loop();
 }
@@ -154,12 +159,14 @@ extern void panic_assert(const char *file, u32 line, const char *desc)
 void kabort() {
   cpu::disable_interrupts();
   kputs("Your kernel has aborted(). Get some cofffe.\n");
+  inspector.print_backtrace();
   cpu::halt_loop();
 }
 
 void __cxa_pure_virtual() {
   cpu::disable_interrupts();
   console.printf("Pure virtual method called. Full stop.\n");
+  inspector.print_backtrace();
   cpu::halt_loop();
 }
 

@@ -131,6 +131,33 @@ namespace elf {
 
   };
 
+  /*
+   * Section header 
+   */
+  struct Section {
+    u32        sh_name;
+    u32        sh_type;
+    u32        sh_flags;
+    u32        sh_addr;
+    u32        sh_offset;
+    u32        sh_size;
+    u32        sh_link;
+    u32        sh_info;
+    u32        sh_addralign;
+    u32        sh_entsize;
+
+    u32 addr() {
+      return sh_addr;
+    }
+
+    u32 size() {
+      return sh_size;
+    }
+
+    u32 name() {
+      return sh_name;
+    }
+  };
 
   struct Header {
     u8  e_ident[16];
@@ -155,22 +182,39 @@ namespace elf {
     }
 
     ProgramHeader* load_ph(fs::Node*);
+    Section* find_section(u8* buffer, const char* name);
   };
 
-  /*
-   * Section header 
-   */
-  struct Section {
-    u32        sh_name;
-    u32        sh_type;
-    u32        sh_flags;
-    u32        sh_addr;
-    u32        sh_offset;
-    u32        sh_size;
-    u32        sh_link;
-    u32        sh_info;
-    u32        sh_addralign;
-    u32        sh_entsize;
+  struct Symbol {
+    u32 name;
+    u32 value;
+    u32 size;
+    u8  info;
+    u8  other;
+    u8  shndx;
+
+    enum eType {
+      eNone = 0,
+      eObject = 1,
+      eFunc = 2,
+      eSection = 3,
+      eFile = 4,
+      eLoProc = 13,
+      eHiProc = 15
+    };
+
+    bool contains_p(u32 addr, u32* offset) {
+      if(addr >= value && addr < (value + size)) {
+        *offset = value - addr;
+        return true;
+      }
+
+      return false;
+    }
+
+    bool func_p() {
+      return (info & 0xf) == eFunc; 
+    }
   };
 
   struct Request {

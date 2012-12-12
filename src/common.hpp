@@ -57,6 +57,8 @@ void kabort();
 int disable_interrupts();
 void restore_interrupts(int status);
 
+u32** read_ebp();
+
 #define htons(A) ((((u16int)(A) & 0xff00) >> 8) | \
                   (((u16int)(A) & 0x00ff) << 8))
 #define htonl(A) ((((u32int)(A) & 0xff000000) >> 24) | \

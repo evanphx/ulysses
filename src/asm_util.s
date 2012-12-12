@@ -10,6 +10,11 @@ read_eip:
     jmp eax                     ; Return. Can't use RET because return
                                 ; address popped off the stack. 
 
+[GLOBAL read_ebp]
+read_ebp:
+    mov eax, ebp
+    ret
+
 [GLOBAL second_return]
 second_return:   ; A dummy symbol that should not be executed.
     ret          ; It's address is just used to determine if save

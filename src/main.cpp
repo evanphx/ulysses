@@ -20,6 +20,7 @@
 #include "character/console.hpp"
 #include "scheduler.hpp"
 #include "tar.hpp"
+#include "inspector.hpp"
 
 #include "cpu.hpp"
 
@@ -78,6 +79,8 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
 
   // Start paging.
   vmem.init(mem_total, kstart, kend, initrd_end);
+
+  inspector.init(mboot_ptr);
 
   // Start multitasking.
   scheduler.init();
