@@ -130,10 +130,11 @@ namespace elf {
     }
   }
 
-  char** Loader::copy_string_table(u32 top, TableInfo& tbl) {
-    char** table = (char**)(top - tbl.table_size);
-
-    char* pos = (char*)(top - tbl.table_size - tbl.bytes);
+  char** Loader::copy_string_table(u32 data_addr, u32 table_addr,
+                                   TableInfo& tbl)
+  {
+    char** table = (char**)table_addr;
+    char* pos = (char*)data_addr;
 
     u32 size = tbl.entries;
 
@@ -154,60 +155,67 @@ namespace elf {
     return table;
   }
 
-  struct stack_layout {
-    u32  argc;
-    char** argv;
-    char** environ;
-  };
-
   /*
+   *
+   * This is the "traditional" layout that pretty much all crt's
+   * expect. Rather than fight it, just lay our data out the same.
   Layout on stack (high addresses to low addresses)
   
-  ptr(env_s1) \
-  ptr(env_s2) | pointer table
-  ...         |
-  ptr(env_sn) / <- environ
   env_sn \
   ...    | data
   env_s2 |
   env_s1 /
-  ptr(argv_s1) \
-  ptr(argv_s2) | pointer table
-  ...          |
-  ptr(argv_sn) / <- argv
   argv_sn \
   ...     | data
   argv_s2 |
   argv_s1 /
-  ptr(ptr(env_s1)) aka environ
-  ptr(ptr(argv_s1)) aka argv
+  0
+  0  <- auxv
+  ptr(env_s1) \
+  ptr(env_s2) | pointer table
+  ...         |
+  ptr(env_sn) / <- environ
+  ptr(argv_s1) \
+  ptr(argv_s2) | pointer table
+  ...          |
+  ptr(argv_sn) / <- argv
   argc
+
   */
 
   void Loader::setup_args() {
     TableInfo env(req_.env);
     TableInfo argv(req_.argv);
 
+    u32 auxv_size = sizeof(void*) * 2;
+
     u32 top = stack_top();
 
-    u32 header_bytes = env.total_size() + argv.total_size() +
-                       sizeof(u32) + (sizeof(char**) + 2);
+    u32 total_bytes = env.total_size() + argv.total_size() +
+                       auxv_size + sizeof(u32);
 
-    header_bytes = align(header_bytes, 16);
+    u32 header_bytes = align(total_bytes, 16);
 
     allocate_pages_for_header(header_bytes);
 
-    char** env_tbl = copy_string_table(top, env);
-    char** arg_tbl = copy_string_table(top - env.total_size(), argv);
-
     new_esp_ = top - header_bytes;
 
-    // now the stack args that the program will see
-    stack_layout* layout = (stack_layout*)new_esp_;
+    u32 argc_addr = new_esp_;
+    u32 argv_table = argc_addr + sizeof(u32);
+    u32 env_table = argv_table + argv.table_size;
+    u32 auxv_table = env_table + env.table_size;
+    u32 argv_data = auxv_table + auxv_size;
+    u32 env_data = argv_data + argv.data_size();
 
-    layout->argc = argv.entries;
-    layout->argv = arg_tbl;
-    layout->environ = env_tbl;
+    copy_string_table(env_data,  env_table,  env);
+    copy_string_table(argv_data, argv_table, argv);
+
+    u32* auxv = (u32*)auxv_table;
+    auxv[0] = 0;
+    auxv[1] = 0;
+
+    u32* argc_p = (u32*)argc_addr;
+    *argc_p = argv.entries;
   }
 
   bool Loader::load_into(Process* proc) {

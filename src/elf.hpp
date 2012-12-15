@@ -244,6 +244,10 @@ namespace elf {
     u32 total_size() {
       return table_size + bytes;
     }
+
+    u32 data_size() {
+      return bytes;
+    }
   };
 
   class Loader {
@@ -274,7 +278,7 @@ namespace elf {
     void setup_args();
 
     void allocate_pages_for_header(u32 bytes);
-    char** copy_string_table(u32 target, TableInfo& tbl);
+    char** copy_string_table(u32 target, u32 table, TableInfo& tbl);
   };
 }
 
