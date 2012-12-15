@@ -35,7 +35,7 @@ void _syscall_tramp_wait_any(Registers* regs) {
 }
 void _syscall_tramp_open(Registers* regs) {
   TRACE_START_SYSCALL(7);
-  regs->eax = SYSCALL_NAME(open)((char*)regs->ebx, (int)regs->ecx);
+  regs->eax = SYSCALL_NAME(open)((const char*)regs->ebx, (int)regs->ecx);
   TRACE_END_SYSCALL(7);
 }
 void _syscall_tramp_read(Registers* regs) {
@@ -108,10 +108,25 @@ void _syscall_tramp_brk(Registers* regs) {
   regs->eax = SYSCALL_NAME(brk)((u32)regs->ebx);
   TRACE_END_SYSCALL(21);
 }
-void _syscall_tramp_exit_group(Registers* regs) {
+void _syscall_tramp_dup(Registers* regs) {
   TRACE_START_SYSCALL(22);
-  regs->eax = SYSCALL_NAME(exit_group)((int)regs->ebx);
+  regs->eax = SYSCALL_NAME(dup)((int)regs->ebx);
   TRACE_END_SYSCALL(22);
+}
+void _syscall_tramp_set_thread_area(Registers* regs) {
+  TRACE_START_SYSCALL(23);
+  regs->eax = SYSCALL_NAME(set_thread_area)((struct region*)regs->ebx);
+  TRACE_END_SYSCALL(23);
+}
+void _syscall_tramp_rt_sigprocmask(Registers* regs) {
+  TRACE_START_SYSCALL(24);
+  regs->eax = SYSCALL_NAME(rt_sigprocmask)((int)regs->ebx, (void*)regs->ecx, (void*)regs->edx, (int)regs->esi);
+  TRACE_END_SYSCALL(24);
+}
+void _syscall_tramp_set_tid_address(Registers* regs) {
+  TRACE_START_SYSCALL(25);
+  regs->eax = SYSCALL_NAME(set_tid_address)((int*)regs->ebx);
+  TRACE_END_SYSCALL(25);
 }
 static void* syscalls[] = {
   (void*)&_syscall_tramp_kprint,
@@ -136,10 +151,13 @@ static void* syscalls[] = {
   (void*)&_syscall_tramp_writev,
   (void*)&_syscall_tramp_ioctl,
   (void*)&_syscall_tramp_brk,
-  (void*)&_syscall_tramp_exit_group,
+  (void*)&_syscall_tramp_dup,
+  (void*)&_syscall_tramp_set_thread_area,
+  (void*)&_syscall_tramp_rt_sigprocmask,
+  (void*)&_syscall_tramp_set_tid_address,
   0
 };
-const static u32 num_syscalls = 23;
+const static u32 num_syscalls = 26;
 static const char* syscall_names[] = {
   "kprint",
   "fork",
@@ -163,6 +181,9 @@ static const char* syscall_names[] = {
   "writev",
   "ioctl",
   "brk",
-  "exit_group",
+  "dup",
+  "set_thread_area",
+  "rt_sigprocmask",
+  "set_tid_address",
   0
 };

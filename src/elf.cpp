@@ -107,6 +107,9 @@ namespace elf {
 
     for(int i = 0; i < hdr->e_phnum; i++) {
       if(ph->load_p()) {
+        // console.printf("Mapping %p (%x) from %x\n", ph->p_vaddr, ph->p_memsz,
+                       // ph->p_offset);
+
         proc->add_mmap(req_.node, ph->p_offset, ph->p_filesz,
                                     ph->p_vaddr, ph->p_memsz,
                                     ph->mmap_flags());
@@ -139,6 +142,8 @@ namespace elf {
       int str_len = strlen(str) + 1;  // +1 for the NULL too
       memcpy((u8*)pos, (const u8*)str, str_len);
 
+      console.printf("[%d] => %p (%s)\n", i, pos, str);
+
       table[i] = pos; 
 
       pos += str_len;
@@ -150,7 +155,6 @@ namespace elf {
   }
 
   struct stack_layout {
-    u32* ret_addr;
     u32  argc;
     char** argv;
     char** environ;
@@ -178,7 +182,6 @@ namespace elf {
   ptr(ptr(env_s1)) aka environ
   ptr(ptr(argv_s1)) aka argv
   argc
-  ret_addr
   */
 
   void Loader::setup_args() {
@@ -202,7 +205,6 @@ namespace elf {
     // now the stack args that the program will see
     stack_layout* layout = (stack_layout*)new_esp_;
 
-    layout->ret_addr = 0;
     layout->argc = argv.entries;
     layout->argv = arg_tbl;
     layout->environ = env_tbl;

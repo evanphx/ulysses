@@ -94,8 +94,10 @@ extern isr_handler
 isr_common_stub:
     pusha                    ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
 
-    mov ax, ds               ; Lower 16-bits of eax = ds.
-    push eax                 ; save the data segment descriptor
+    push ds
+    push es
+    push fs
+    push gs
 
     mov ax, 0x10  ; load the kernel data segment descriptor
     mov ds, ax
@@ -105,11 +107,10 @@ isr_common_stub:
 
     call isr_handler
 
-    pop ebx        ; reload the original data segment descriptor
-    mov ds, bx
-    mov es, bx
-    mov fs, bx
-    mov gs, bx
+    pop gs
+    pop fs
+    pop es
+    pop ds
 
     popa                     ; Pops edi,esi,ebp...
     add esp, 8     ; Cleans up the pushed error code and pushed ISR number
@@ -125,8 +126,10 @@ extern irq_handler
 irq_common_stub:
     pusha                    ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
 
-    mov ax, ds               ; Lower 16-bits of eax = ds.
-    push eax                 ; save the data segment descriptor
+    push ds
+    push es
+    push fs
+    push gs
 
     mov ax, 0x10  ; load the kernel data segment descriptor
     mov ds, ax
@@ -136,11 +139,10 @@ irq_common_stub:
 
     call irq_handler
 
-    pop ebx        ; reload the original data segment descriptor
-    mov ds, bx
-    mov es, bx
-    mov fs, bx
-    mov gs, bx
+    pop gs
+    pop fs
+    pop es
+    pop ds
 
     popa                     ; Pops edi,esi,ebp...
     add esp, 8     ; Cleans up the pushed error code and pushed ISR number

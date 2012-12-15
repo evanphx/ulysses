@@ -28,6 +28,14 @@ const char* init_argv[] = { "/bin/init", "start", 0 };
 const char* init_envp[] = { "TERM=ulysses", "OS=ulysses", 0 };
 
 void run_init() {
+  syscall_mount("/dev", "devfs", 0);
+
+  int i = syscall_open("/dev/console", 0);
+  int j = syscall_dup(i);
+  int k = syscall_dup(i);
+
+  console.printf("Opened %d, %d, and %d\n", i, j, k);
+
   syscall_exec("test", init_argv, init_envp);
 }
 

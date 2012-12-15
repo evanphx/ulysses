@@ -28,6 +28,9 @@
 #define IRQ15 47
 
 struct Registers {
+  u32 gs;
+  u32 fs;
+  u32 es;
   u32 ds;                  // Data segment selector
   u32 edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha.
   u32 int_no, err_code;    // Interrupt number and error code (if applicable)

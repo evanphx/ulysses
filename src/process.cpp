@@ -46,6 +46,17 @@ int Process::open_file(const char* path, int mode) {
   return fd;
 }
 
+int Process::dup_fd(int fd) {
+  fs::File* file = get_file(fd);
+  if(!file) return -1;
+
+  int new_fd = find_fd();
+
+  fds_[new_fd] = file;
+
+  return new_fd;
+}
+
 fs::File* Process::get_file(int fd) {
   if(fd < 0 || fd >= 16) return 0;
   return fds_[fd];

@@ -20,6 +20,12 @@ gdt_flush:
 .flush:
     ret
 
+[GLOBAL gs_set]
+gs_set:
+    mov eax, [esp+4]
+    mov gs, ax
+    ret
+
 [GLOBAL idt_flush]    ; Allows the C code to call idt_flush().
 
 idt_flush:
@@ -29,9 +35,9 @@ idt_flush:
 
 [GLOBAL tss_flush]    ; Allows our C code to call tss_flush().
 tss_flush:
-    mov ax, 0x2B      ; Load the index of our TSS structure - The index is
-                      ; 0x28, as it is the 5th selector and each is 8 bytes
-                      ; long, but we set the bottom two bits (making 0x2B)
+    mov ax, 0x33      ; Load the index of our TSS structure - The index is
+                      ; 0x33, as it is the 5th selector and each is 8 bytes
+                      ; long, but we set the bottom two bits (making 0x33)
                       ; so that it has an RPL of 3, not zero.
-    ltr ax            ; Load 0x2B into the task state register.
+    ltr ax            ; Load 0x33 into the task state register.
     ret

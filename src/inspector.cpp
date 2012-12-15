@@ -43,6 +43,7 @@ void Inspector::print_backtrace() {
 }
 
 void Inspector::print_backtrace(u32** ebp) {
+  return;
   u32** eip;
 
   while(ebp) {

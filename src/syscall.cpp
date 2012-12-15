@@ -42,6 +42,7 @@ SYSCALL(17, exec, Registers* regs) {
   }
 
   regs->eax = 0;
+  regs->edx = 0; // we don't define a kernel specified fini
   regs->eip = loader.target_ip();
   regs->ds = segments::cUserDS;
   regs->ss = segments::cUserDS;
@@ -87,7 +88,7 @@ SYSCALL(6, wait_any, int* status) {
   return scheduler.wait_any(status);
 }
 
-SYSCALL(7, open, char* name, int mode) {
+SYSCALL(7, open, const char* name, int mode) {
   return scheduler.process()->open_file(name, mode);
 }
 
@@ -113,6 +114,10 @@ SYSCALL(11, write, int fd, char* buffer, int size) {
     console.printf("unable to find fd %d\n", fd);
     return -1;
   }
+}
+
+SYSCALL(22, dup, int fd) {
+  return scheduler.process()->dup_fd(fd);
 }
 
 SYSCALL(9, mount, const char* path, const char* fstype, const char* dev) {
@@ -186,6 +191,26 @@ SYSCALL(20, ioctl, int fd, unsigned long req, unsigned long arg) {
   } else {
     return -1;
   }
+}
+
+struct region {
+  int entry;
+  u32 base;
+  u32 limit;
+};
+
+SYSCALL(23, set_thread_area, struct region* reg) {
+  if(reg->entry != -1) return 1;
+  reg->entry = set_gs(reg->base, reg->limit);
+  return 0;
+}
+
+SYSCALL(24, rt_sigprocmask, int how, void* set, void* old, int size) {
+  return 0;
+}
+
+SYSCALL(25, set_tid_address, int* addr) {
+  return 0;
 }
 
 const char* syscall_name(int idx);

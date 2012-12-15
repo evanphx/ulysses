@@ -89,12 +89,22 @@ void test_read_file_300th_block() {
   }
 }
 
+int new_main(int argc, char** argv) {
+  /* const char* msg = "console from userspace!\n"; */
+  char buf[256];
+
+  /* int tmp2 = open("/tmp/blah", 0); */
+  /* read(tmp2, buf, strlen(msg)+1); */
+
+  /* printf("tmpfs read: %s\n", buf); */
+  printf("done!\n");
+  return 0;
+}
+
 int main(int argc, char** argv, char** environ) {
   big_stuff[2000] = 1;
 
-  exit(0);
-
-  __syscall(SYS_mount, "/dev", "devfs", 0);
+  /* __syscall(SYS_mount, "/dev", "devfs", 0); */
   __syscall(SYS_mount, "/data", "ext2", "/dev/ada");
   __syscall(SYS_mount, "/tmp", "tmpfs", 0);
 
@@ -124,14 +134,14 @@ int main(int argc, char** argv, char** environ) {
 
   write(tmp3, msg, strlen(msg)+1);
 
+  /*
   DIR* dir = opendir("/tmp");
-  /* printf("DIR: %p, fd: %d, loc:%d\n", dir, dir->dd_fd, dir->dd_loc); */
   struct dirent* de = readdir(dir);
 
   while(de) {
     printf("read: %s\n", de->d_name);
     de = readdir(dir);
-  }
+  }*/
 
   printf("argc=%d, argv=%p, env=%p\n", argc, argv, environ);
   printf("argv[0]=%p (%s)\n", argv[0], argv[0]);
@@ -140,7 +150,7 @@ int main(int argc, char** argv, char** environ) {
   kputs("hello from user land!\n");
   /* kputs("hello again from user land, sleeping now.\n"); */
   /* __syscall_sleep(2); */
-  kputs("done sleeping! opening file...\n");
+  /* kputs("done sleeping! opening file...\n"); */
 
   /* kputs("test 1\n"); */
   /* test_read_file(); */

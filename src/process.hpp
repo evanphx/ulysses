@@ -82,6 +82,8 @@ public:
   u32 set_brk(u32 target);
 
   int open_file(const char* name, int mode);
+  int dup_fd(int fd);
+
   fs::File* get_file(int fd);
 
   Thread* new_thread(void* placed);

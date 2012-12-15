@@ -8,8 +8,11 @@
 #include "thread.hpp"
 #include "scheduler.hpp"
 #include "process.hpp"
+#include "algo.hpp"
 
 VirtualMemory vmem = {0, 0, 0, 0};
+
+using namespace algo;
 
 // Function to allocate a frame.
 void VirtualMemory::alloc_frame(x86::Page* page, bool is_kernel, bool is_writeable) {
@@ -35,38 +38,70 @@ void VirtualMemory::free_frame(x86::Page* page) {
 
 bool MemoryMapping::fulfill(Thread* task, u32 request) {
   u32 page_address = request & cpu::cPageMask;
-  u32 request_offset = page_address - address_;
 
-  u32 target_offset = offset_ + request_offset;
+  // The requested start of the region is actually in the middle
+  // of a page (always the first page, by the by).
+  //
+  // Thusly, handle this seperately.
+  if(page_address < address_) {
 
-  u32 target_size;
-  if(request_offset > file_size_) {
-    target_size = 0;
-  } else {
-    target_size = file_size_ - request_offset;
-    // We only fill one page, so clamp the target_size
-    if(target_size > cpu::cPageSize) {
-      target_size = cpu::cPageSize;
+    // Firstly, allocate the page.
+    x86::Page* p = vmem.get_current_page(page_address, 1);
+    vmem.alloc_user_frame(p, writable_p());
+
+    // zero out the unused bits at the bottom of the page
+    memset((u8*)page_address, 0, address_ - page_address);
+
+    // read data from the file into the base address
+    // (which implicitly contains the request address)
+    u32 target_offset = offset_;
+    u32 target_size = (page_address + cpu::cPageSize) - address_;
+
+    // console.printf("on-demand mapped %x to %x for %x (offset=%d, size=%d)\n",
+        // page_address, p->frame, request,
+        // target_offset, target_size);
+
+    // Read in data from the node now, but only as much as is
+    // specified by the mapping.
+    u32 read_size = min(target_size, file_size_);
+
+    node_->read(target_offset, read_size, (u8*)address_);
+
+    // Zero out the rest of the page if we didn't read into it.
+    if(read_size < target_size) {
+      memset((u8*)address_ + read_size, 0, target_size - read_size);
     }
-  }
+  } else {
+    u32 request_offset = page_address - address_;
+    u32 target_offset = offset_ + request_offset;
 
-  u32 zero_fill_size = cpu::cPageSize - target_size;
+    u32 target_size;
+    if(request_offset > file_size_) {
+      target_size = 0;
+    } else {
+      target_size = file_size_ - request_offset;
+      // We only fill one page, so clamp the target_size
+      if(target_size > cpu::cPageSize) {
+        target_size = cpu::cPageSize;
+      }
+    }
 
-  x86::Page* p = vmem.get_current_page(page_address, 1);
-  vmem.alloc_user_frame(p, writable_p());
+    u32 zero_fill_size = cpu::cPageSize - target_size;
 
-  /*
-  console.printf("on-demand mapped %x to %x for %x (offset=%d, size=%d)\n",
-                 page_address, p->frame, request,
-                 target_offset, target_size);
-  */
+    x86::Page* p = vmem.get_current_page(page_address, 1);
+    vmem.alloc_user_frame(p, writable_p());
 
-  if(target_size > 0) {
-    node_->read(target_offset, target_size, (u8*)page_address);
-  }
+    // console.printf("on-demand mapped %x to %x for %x (offset=%d, size=%d)\n",
+        // page_address, p->frame, request,
+        // target_offset, target_size);
 
-  if(zero_fill_size > 0) {
-    memset((u8*)page_address + target_size, 0, zero_fill_size);
+    if(target_size > 0) {
+      node_->read(target_offset, target_size, (u8*)page_address);
+    }
+
+    if(zero_fill_size > 0) {
+      memset((u8*)page_address + target_size, 0, zero_fill_size);
+    }
   }
 
   return true;

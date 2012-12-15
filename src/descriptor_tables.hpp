@@ -13,11 +13,14 @@
 namespace segments {
   const static u32 cKernelCS = 0x08;
   const static u32 cKernelDS = 0x10;
-  const static u32 cUserCS = 0x1b;
-  const static u32 cUserDS = 0x23;
+  const static u32 cUserCS = 0x1b; // 0x18 + 3 for ring 3
+  const static u32 cUserDS = 0x23; // 0x20 + 3 for ring 3
+  const static u32 cThreadDS = 0x2b; // 0x2b + 3 for ring 3
 }
 
 extern "C" {
+
+u32 set_gs(u32 base, u32 limit);
 
 void set_kernel_stack(u32int stack);
 
