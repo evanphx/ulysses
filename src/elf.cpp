@@ -105,6 +105,8 @@ namespace elf {
     own<ProgramHeader*> first_ph = hdr->load_ph(req_.node);
     ProgramHeader* ph = first_ph;
 
+    u32 brk = 0;
+
     for(int i = 0; i < hdr->e_phnum; i++) {
       if(ph->load_p()) {
         // console.printf("Mapping %p (%x) from %x\n", ph->p_vaddr, ph->p_memsz,
@@ -113,9 +115,15 @@ namespace elf {
         proc->add_mmap(req_.node, ph->p_offset, ph->p_filesz,
                                     ph->p_vaddr, ph->p_memsz,
                                     ph->mmap_flags());
+
+        u32 addr = ph->p_vaddr + ph->p_memsz;
+        if(addr > brk) brk = addr;
       }
+
       ph++;
     }
+
+    proc->position_brk(brk);
   }
 
   void Loader::allocate_pages_for_header(u32 bytes) {
@@ -142,8 +150,6 @@ namespace elf {
       const char* str = tbl.table[i];
       int str_len = strlen(str) + 1;  // +1 for the NULL too
       memcpy((u8*)pos, (const u8*)str, str_len);
-
-      console.printf("[%d] => %p (%s)\n", i, pos, str);
 
       table[i] = pos; 
 

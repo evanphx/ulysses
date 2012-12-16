@@ -90,6 +90,11 @@ u32 Process::change_heap(int bytes) {
   return ret;
 }
 
+void Process::position_brk(u32 fin) {
+  MemoryMapping mapping(fin, 0, 0, 0, 0, MemoryMapping::eAll);
+  break_mapping_ = &mmaps_.append(mapping);
+}
+
 u32 Process::set_brk(u32 target) {
   if(!break_mapping_) {
     int flags = MemoryMapping::eAll;

@@ -81,6 +81,8 @@ public:
   u32 change_heap(int bytes);
   u32 set_brk(u32 target);
 
+  void position_brk(u32 fin);
+
   int open_file(const char* name, int mode);
   int dup_fd(int fd);
 
