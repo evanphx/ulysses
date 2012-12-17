@@ -152,11 +152,15 @@ namespace tar {
         if(strm.avail_out != 0) break;
       }
 
-      strm.avail_out = bytes % 512;
-      strm.next_out = out;
+      u32 extra = align(bytes, 512) - bytes;
 
-      ret = inflate(&strm, Z_NO_FLUSH);
-      ASSERT(ret == Z_OK);
+      if(extra > 0) {
+        strm.avail_out = extra;
+        strm.next_out = out;
+
+        ret = inflate(&strm, Z_NO_FLUSH);
+        ASSERT(ret == Z_OK);
+      }
     }
 
     (void)inflateEnd(&strm);

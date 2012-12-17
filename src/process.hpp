@@ -17,6 +17,7 @@ public:
     cTotal = 2
   };
 
+  const static u32 cDefaultMMapStart =  0x1000000;
   const static u32 cDefaultBreakStart = 0x2000000;
   const static u32 cDefaultBreakSize  = 1024 * 1024;
 
@@ -40,6 +41,8 @@ private:
   int exit_code_;
 
   int thread_ids_;
+
+  u32 next_mmap_start_;
 
 public:
   x86::PageDirectory* directory;
@@ -89,6 +92,10 @@ public:
   fs::File* get_file(int fd);
 
   Thread* new_thread(void* placed);
+
+  u32 new_mmap_region(u32 size);
+
+  void print_mmaps();
 };
 
 #endif

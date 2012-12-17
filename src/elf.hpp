@@ -89,6 +89,24 @@ namespace elf {
     MT_X86_64 = 62
   };
 
+  enum AuxiliaryTypes {
+    AT_NULL    = 0,
+    AT_IGNORE  = 1,
+    AT_EXECFD  = 2,  /* file descriptor of program */
+    AT_PHDR    = 3,  /* ELF program headers address */
+    AT_PHENT   = 4,  /* size of program header entry */
+    AT_PHNUM   = 5,  /* number of program headers */
+    AT_PAGESZ  = 6,  /* system page size */
+    AT_BASE    = 7,  /* base address of interpreter */
+    AT_FLAGS   = 8,  /* flags */
+    AT_ENTRY   = 9,  /* entry point of program */
+    AT_NOTELF  = 10, /* program is not ELF */
+    AT_UID     = 11, /* real uid */
+    AT_EUID    = 12, /* effective uid */
+    AT_GID     = 13, /* real gid */
+    AT_EGID    = 14  /* effective gid */
+  };
+
   /*
    * Program header 
    */
@@ -106,6 +124,10 @@ namespace elf {
 
     bool load_p() {
       return p_type == PT_LOAD;
+    }
+
+    bool interp_p() {
+      return p_type == PT_INTERP;
     }
 
     bool readable_p() {
@@ -252,12 +274,17 @@ namespace elf {
 
   class Loader {
     Request& req_;
+    Request* interp_req_;
+
     u32 new_esp_;
     u32 target_ip_;
+    u32 base_address_;
+    u32 interp_base_address_;
 
   public:
     Loader(Request& req);
     bool load_into(Process* proc);
+    bool load_as_lib(Process* proc);
 
   public:
     u32 target_ip() {
@@ -272,13 +299,26 @@ namespace elf {
       return KERNEL_VIRTUAL_BASE;
     }
 
+    u32 auxv_records() {
+      return 8;
+    }
+
+    u32 base_address() {
+      return base_address_;
+    }
+
   private:
     Header* load_header();
     void map_memory(Header* hdr, Process* proc);
-    void setup_args();
+    u32 map_lib_memory(Header* hdr, Process* proc);
+    void setup_args(Header* hdr);
 
     void allocate_pages_for_header(u32 bytes);
     char** copy_string_table(u32 target, u32 table, TableInfo& tbl);
+    bool setup_interp(Header* hdr, Process* proc);
+    bool load_interp(Process* proc);
+    void write_auxv_table(Header* hdr, u32 table);
+
   };
 }
 

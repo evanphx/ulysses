@@ -31,10 +31,8 @@ void run_init() {
   syscall_mount("/dev", "devfs", 0);
 
   int i = syscall_open("/dev/console", 0);
-  int j = syscall_dup(i);
-  int k = syscall_dup(i);
-
-  console.printf("Opened %d, %d, and %d\n", i, j, k);
+  syscall_dup(i);
+  syscall_dup(i);
 
   syscall_exec("test", init_argv, init_envp);
 }

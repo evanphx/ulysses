@@ -49,8 +49,6 @@ SYSCALL(17, exec, Registers* regs) {
   regs->cs = segments::cUserCS;
   regs->useresp = loader.new_esp();
 
-  console.printf("ready to execute '%s' at %p...\n", path, regs->eip);
-
   return 0;
 }
 

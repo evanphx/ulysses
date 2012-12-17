@@ -13,6 +13,7 @@ Process::Process(int pid)
   : pid_(pid)
   , break_mapping_(0)
   , thread_ids_(0)
+  , next_mmap_start_(cDefaultMMapStart)
 {
   for(int i = 0; i < 16; i++) {
     fds_[i] = 0;
@@ -76,6 +77,20 @@ MemoryMapping* Process::find_mapping(u32 addr) {
   return 0;
 }
 
+void Process::print_mmaps() {
+  auto i = mmaps_.begin();
+
+  while(i.more_p()) {
+    MemoryMapping& mmap = i.advance();
+
+    console.printf("%p-%p (%d) %s\n",
+                   mmap.page_start(), mmap.page_end(),
+                   mmap.mem_size(),
+                   mmap.writable_p() ? "read-write" : "read-only");
+  }
+}
+
+
 u32 Process::change_heap(int bytes) {
   if(!break_mapping_) {
     int flags = MemoryMapping::eAll;
@@ -88,6 +103,12 @@ u32 Process::change_heap(int bytes) {
   u32 ret = break_mapping_->end_address();
   break_mapping_->enlarge_mem_size(bytes);
   return ret;
+}
+
+u32 Process::new_mmap_region(u32 size) {
+  u32 addr = next_mmap_start_;
+  next_mmap_start_ += size;
+  return addr;
 }
 
 void Process::position_brk(u32 fin) {

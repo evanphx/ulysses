@@ -139,6 +139,12 @@ public:
     if(reserved) console.write("reserved ");
     console.printf(") at 0x%x\n", faulting_address);
 
+    if(mmap) {
+      console.printf("mmap region: %p (size: %d), %s\n",
+                     mmap->address(), mmap->mem_size(),
+                     mmap->writable_p() ? "read-write" : "read-only");
+    }
+
     console.printf("ds: %x\n", regs->ds);
     console.printf("edi: %x, esi: %x, ebp: %x, esp: %x\n",
         regs->edi, regs->esi, regs->ebp, regs->esp);
@@ -148,6 +154,9 @@ public:
     console.printf("eip: %x, cs: %x, eflags: %x, useresp: %x, ss: %x\n",
         regs->eip, regs->cs, regs->eflags,
         regs->useresp, regs->ss);
+
+    // console.printf("mmap regions:\n");
+    scheduler.process()->print_mmaps();
 
     PANIC("Page fault");
   }

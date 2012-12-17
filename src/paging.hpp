@@ -61,6 +61,9 @@ namespace x86 {
 class Thread;
 
 class MemoryMapping {
+  u32 page_start_;
+  u32 page_end_;
+
   u32 address_;
   u32 mem_size_;
 
@@ -86,7 +89,10 @@ public:
     , offset_(offset)
     , file_size_(size)
     , flags_(flags)
-  {}
+  {
+    page_start_ = address_ & cpu::cPageMask;
+    page_end_   = align(address_ + mem_size_, cpu::cPageSize);
+  }
 
   u32 address() {
     return address_;
@@ -100,8 +106,17 @@ public:
     return address_ + mem_size_;
   }
 
+  u32 page_start() {
+    return page_start_;
+  }
+
+  u32 page_end() {
+    return page_end_;
+  }
+
   void enlarge_mem_size(u32 ammount) {
     mem_size_ += ammount;
+    page_end_ = align(address_ + mem_size_, cpu::cPageSize);
   }
 
   fs::Node* node() {
@@ -117,7 +132,8 @@ public:
   }
 
   bool contains_p(u32 addr) {
-    return addr >= address_ && addr < address_ + mem_size_;
+    return addr >= page_start_ && addr < page_end_;
+    // return addr >= address_ && addr < address_ + mem_size_;
   }
 
   bool readable_p() {
