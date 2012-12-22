@@ -128,6 +128,51 @@ void _syscall_tramp_set_tid_address(Registers* regs) {
   regs->eax = SYSCALL_NAME(set_tid_address)((int*)regs->ebx);
   TRACE_END_SYSCALL(25);
 }
+void _syscall_tramp_kill(Registers* regs) {
+  TRACE_START_SYSCALL(26);
+  regs->eax = SYSCALL_NAME(kill)((int)regs->ebx, (int)regs->ecx);
+  TRACE_END_SYSCALL(26);
+}
+void _syscall_tramp_getpgrp(Registers* regs) {
+  TRACE_START_SYSCALL(27);
+  regs->eax = SYSCALL_NAME(getpgrp)();
+  TRACE_END_SYSCALL(27);
+}
+void _syscall_tramp_stat(Registers* regs) {
+  TRACE_START_SYSCALL(28);
+  regs->eax = SYSCALL_NAME(stat)((char*)regs->ebx, (struct stat*)regs->ecx);
+  TRACE_END_SYSCALL(28);
+}
+void _syscall_tramp_geteuid(Registers* regs) {
+  TRACE_START_SYSCALL(29);
+  regs->eax = SYSCALL_NAME(geteuid)();
+  TRACE_END_SYSCALL(29);
+}
+void _syscall_tramp_getppid(Registers* regs) {
+  TRACE_START_SYSCALL(30);
+  regs->eax = SYSCALL_NAME(getppid)((int)regs->ebx);
+  TRACE_END_SYSCALL(30);
+}
+void _syscall_tramp_getcwd(Registers* regs) {
+  TRACE_START_SYSCALL(31);
+  regs->eax = SYSCALL_NAME(getcwd)((char*)regs->ebx, (int)regs->ecx);
+  TRACE_END_SYSCALL(31);
+}
+void _syscall_tramp_rt_sigaction(Registers* regs) {
+  TRACE_START_SYSCALL(32);
+  regs->eax = SYSCALL_NAME(rt_sigaction)((int)regs->ebx, (void*)regs->ecx, (void*)regs->edx, (int)regs->esi);
+  TRACE_END_SYSCALL(32);
+}
+void _syscall_tramp_fcntl(Registers* regs) {
+  TRACE_START_SYSCALL(33);
+  regs->eax = SYSCALL_NAME(fcntl)((int)regs->ebx, (int)regs->ecx, (void*)regs->edx);
+  TRACE_END_SYSCALL(33);
+}
+void _syscall_tramp_close(Registers* regs) {
+  TRACE_START_SYSCALL(34);
+  regs->eax = SYSCALL_NAME(close)((int)regs->ebx);
+  TRACE_END_SYSCALL(34);
+}
 static void* syscalls[] = {
   (void*)&_syscall_tramp_kprint,
   (void*)&_syscall_tramp_fork,
@@ -155,9 +200,18 @@ static void* syscalls[] = {
   (void*)&_syscall_tramp_set_thread_area,
   (void*)&_syscall_tramp_rt_sigprocmask,
   (void*)&_syscall_tramp_set_tid_address,
+  (void*)&_syscall_tramp_kill,
+  (void*)&_syscall_tramp_getpgrp,
+  (void*)&_syscall_tramp_stat,
+  (void*)&_syscall_tramp_geteuid,
+  (void*)&_syscall_tramp_getppid,
+  (void*)&_syscall_tramp_getcwd,
+  (void*)&_syscall_tramp_rt_sigaction,
+  (void*)&_syscall_tramp_fcntl,
+  (void*)&_syscall_tramp_close,
   0
 };
-const static u32 num_syscalls = 26;
+const static u32 num_syscalls = 35;
 static const char* syscall_names[] = {
   "kprint",
   "fork",
@@ -185,5 +239,14 @@ static const char* syscall_names[] = {
   "set_thread_area",
   "rt_sigprocmask",
   "set_tid_address",
+  "kill",
+  "getpgrp",
+  "stat",
+  "geteuid",
+  "getppid",
+  "getcwd",
+  "rt_sigaction",
+  "fcntl",
+  "close",
   0
 };

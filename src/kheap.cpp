@@ -18,7 +18,7 @@ Allocation Heap::allocate(u32 size, int align=0) {
 
   void *addr = kheap->alloc(sz, (u8)align);
 
-  x86::Page* page = vmem.get_kernel_page((u32)addr, 0);
+  x86::Page* page = vmem.get_kernel_page((u32)addr, false);
   void* phys = page->frame*0x1000 + ((u32)addr&0xFFF);
 
   Allocation alloc = {addr, phys};
@@ -38,7 +38,7 @@ u32 kmalloc_int(u32 sz, int align, u32 *phys) {
 
   void *addr = kheap->alloc(sz, (u8)align);
   if(phys != 0) {
-    x86::Page* page = vmem.get_kernel_page((u32)addr, 0);
+    x86::Page* page = vmem.get_kernel_page((u32)addr, false);
     *phys = page->frame*0x1000 + ((u32)addr&0xFFF);
   }
 
@@ -95,7 +95,7 @@ static void expand(u32 new_size, Heap *heap) {
   u32 i = old_size;
   while(i < new_size) {
     vmem.alloc_frame(
-        vmem.get_kernel_page(heap->start_address+i, 1),
+        vmem.get_kernel_page(heap->start_address+i, true),
         (heap->supervisor)?1:0,
         (heap->readonly)?0:1
     );
@@ -121,7 +121,7 @@ static u32 contract(u32 new_size, Heap *heap) {
   u32 old_size = heap->end_address-heap->start_address;
   u32 i = old_size - 0x1000;
   while(new_size < i) {
-    vmem.free_frame(vmem.get_kernel_page(heap->start_address+i, 0));
+    vmem.free_frame(vmem.get_kernel_page(heap->start_address+i, false));
     i -= 0x1000;
   }
 
@@ -245,6 +245,7 @@ void* Heap::alloc(u32 size, u8 page_align) {
       header->size += new_length - old_length;
       // Rewrite the footer.
       Heap::footer *footer = (Heap::footer *) ( (u32)header + header->size - sizeof(Heap::footer) );
+      console.printf("hdr->size = %d\n", header->size);
       footer->hdr = header;
       footer->magic = HEAP_MAGIC;
     }

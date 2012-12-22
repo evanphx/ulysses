@@ -46,8 +46,7 @@ bool MemoryMapping::fulfill(Thread* task, u32 request) {
   if(page_address < address_) {
 
     // Firstly, allocate the page.
-    x86::Page* p = vmem.get_current_page(page_address, 1);
-    vmem.alloc_user_frame(p, writable_p());
+    vmem.allocate_user(page_address, writable_p());
 
     // zero out the unused bits at the bottom of the page
     memset((u8*)page_address, 0, address_ - page_address);
@@ -88,8 +87,7 @@ bool MemoryMapping::fulfill(Thread* task, u32 request) {
 
     u32 zero_fill_size = cpu::cPageSize - target_size;
 
-    x86::Page* p = vmem.get_current_page(page_address, 1);
-    vmem.alloc_user_frame(p, writable_p());
+    vmem.allocate_user(page_address, writable_p());
 
     // console.printf("on-demand mapped %x to %x for %x (offset=%d, size=%d)\n",
         // page_address, p->frame, request,
@@ -116,11 +114,24 @@ public:
 
     MemoryMapping* mmap = scheduler.process()->find_mapping(faulting_address);
 
+    PageFaultCode code = regs->page_fault_code();
+
     // The error code gives us details of what happened.
-    bool present = !(regs->err_code & 0x1); // Page not present
-    bool rw = regs->err_code & 0x2;           // Write operation?
-    bool us = regs->err_code & 0x4;           // Processor was in user-mode?
-    bool reserved = regs->err_code & 0x8;     // Overwritten CPU-reserved bits of page entry?
+    bool present = code.present_p();          // Page present
+    bool rw = code.write_p();                 // Write operation?
+    bool us = code.user_p();                  // Processor was in user-mode?
+    bool reserved = code.reserved_p();        // Overwritten CPU-reserved bits of page entry?
+
+    // If it's a page that the kernel is requesting above the kernel
+    // start, then go ahead and allocate a frame.
+    //
+    if(!present && !us && faulting_address > KERNEL_VIRTUAL_BASE) {
+      u32 page_address = faulting_address & cpu::cPageMask;
+
+      x86::Page* p = vmem.get_current_page(page_address, true);
+      vmem.alloc_kernel_frame(p, true);
+      return;
+    }
 
     // Ok, this is for a mapping in the current process.
     if(mmap) {
@@ -207,7 +218,7 @@ void VirtualMemory::init(u32 total_memory, u32 kstart, u32 kend, u32 mem_end) {
       page < initial_heap_end;
       page += cpu::cPageSize)
   {
-    alloc_user_frame(get_page(&allocp, page, 1, kernel_directory));
+    alloc_user_frame(get_page(&allocp, page, true, kernel_directory));
   }
 
   ASSERT(allocp < initial_heap_end);
@@ -236,7 +247,7 @@ void VirtualMemory::switch_page_directory(x86::PageDirectory* dir) {
   cpu::enable_paging();
 }
 
-x86::Page* VirtualMemory::get_page(u32* allocp, u32 address, int make,
+x86::Page* VirtualMemory::get_page(u32* allocp, u32 address, bool make,
                                    x86::PageDirectory* dir)
 {
   // Turn the address into an index.
@@ -266,7 +277,7 @@ x86::Page* VirtualMemory::get_page(u32* allocp, u32 address, int make,
 }
 
 
-x86::Page* VirtualMemory::get_page(u32 address, int make, x86::PageDirectory* dir) {
+x86::Page* VirtualMemory::get_page(u32 address, bool make, x86::PageDirectory* dir) {
   // Turn the address into an index.
   address /= cpu::cPageSize;
   // Find the page table containing this address.
@@ -285,13 +296,20 @@ x86::Page* VirtualMemory::get_page(u32 address, int make, x86::PageDirectory* di
   }
 }
 
-x86::Page* VirtualMemory::get_kernel_page(u32 address, int make) {
+x86::Page* VirtualMemory::get_kernel_page(u32 address, bool make) {
   return get_page(address, make, kernel_directory);
 }
 
-x86::Page* VirtualMemory::get_current_page(u32 address, int make) {
+x86::Page* VirtualMemory::get_current_page(u32 address, bool make) {
   return get_page(address, make, current_directory);
 }
+
+x86::Page* VirtualMemory::allocate_user(u32 page, bool writable) {
+  x86::Page* p = get_current_page(page, true);
+  alloc_user_frame(p, writable);
+  return p;
+}
+
 
 extern "C" void copy_page_physical(int, int);
 

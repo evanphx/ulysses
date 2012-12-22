@@ -46,6 +46,10 @@ public:
     waiting_queue.unlink(thr);
   }
 
+  int euid() {
+    return process()->euid();
+  }
+
   void cleanup();
   void switch_task();
   int fork();
@@ -67,6 +71,9 @@ public:
   void* change_heap(int bytes);
 
   Process* find_process(int pid);
+
+  int process_group(int pid=0);
+  int process_id();
 };
 
 extern Scheduler scheduler;

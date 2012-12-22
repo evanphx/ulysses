@@ -212,7 +212,7 @@ namespace elf {
     // Allocate frames for the memory and map it.
     for(u32 i = 1; i <= pages; i++) {
       u32 addr = top - (i * cpu::cPageSize);
-      x86::Page* p = vmem.get_current_page(addr, 1);
+      x86::Page* p = vmem.get_current_page(addr, true);
       vmem.alloc_user_frame(p, true);
     }
   }

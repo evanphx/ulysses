@@ -172,13 +172,15 @@ struct VirtualMemory {
   void free_frame(x86::Page *page);
 
   void switch_page_directory(x86::PageDirectory *dir);
-  x86::Page* get_page(u32 address, int make, x86::PageDirectory* dir);
-  x86::Page* get_page(u32* allocp, u32 address, int make, x86::PageDirectory* dir);
-  x86::Page* get_kernel_page(u32 address, int make);
-  x86::Page* get_current_page(u32 address, int make);
+  x86::Page* get_page(u32 address, bool make, x86::PageDirectory* dir);
+  x86::Page* get_page(u32* allocp, u32 address, bool make, x86::PageDirectory* dir);
+  x86::Page* get_kernel_page(u32 address, bool make);
+  x86::Page* get_current_page(u32 address, bool make);
   x86::PageDirectory* clone_directory(x86::PageDirectory* src);
   x86::PageDirectory* clone_current();
   x86::PageDirectory* new_directory();
+
+  x86::Page* allocate_user(u32 page, bool writable);
 
   void free_table(x86::PageTable* tbl);
   void free_directory(x86::PageDirectory* dir);

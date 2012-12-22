@@ -62,6 +62,10 @@ namespace fs {
     return ret;
   }
 
+  int File::close() {
+    return node_->close();
+  }
+
   Node* lookup(const char* name, int len, fs::Node* dir) {
     int sub_len = 0;
     while(sub_len < len) {

@@ -412,6 +412,6 @@ namespace ext2 {
   
   u32 Node::write(u32 offset, u32 size, u8* buffer) { return 0; }
   void Node::open() { return; }
-  void Node::close() { return; }
+  int Node::close() { return 0; }
   struct dirent* Node::readdir(u32 index) { return 0; }
 }

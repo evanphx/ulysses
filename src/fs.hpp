@@ -59,7 +59,7 @@ namespace fs {
     virtual u32 read(u32 offset, u32 size, u8* buffer) { return 0; }
     virtual u32 write(u32 offset, u32 size, u8* buffer) { return 0; }
     virtual void open() { return; }
-    virtual void close() { return; }
+    virtual int close() { return 0; }
     virtual struct dirent* readdir(u32 index) { return 0; }
     virtual Node* finddir(const char* name, int len) { return 0; }
     virtual Node* create_file(sys::String& str) { return 0; }
@@ -79,6 +79,7 @@ namespace fs {
     void seek(int pos, int whence);
     int get_entries(void* dp, int count);
     int ioctl(unsigned long req, ...);
+    int close();
   };
 
   class Registry;

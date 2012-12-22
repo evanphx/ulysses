@@ -27,6 +27,31 @@
 #define IRQ14 46
 #define IRQ15 47
 
+class PageFaultCode {
+  u32 code_;
+
+public:
+  PageFaultCode(u32 code)
+    : code_(code)
+  {}
+
+  bool present_p() {
+    return (code_ & 0x1) != 0;
+  }
+
+  bool write_p() {
+    return (code_ & 0x2) != 0;
+  }
+
+  bool user_p() {
+    return (code_ & 0x4) != 0;
+  }
+
+  bool reserved_p() {
+    return (code_ & 0x8) != 0;
+  }
+};
+
 struct Registers {
   u32 gs;
   u32 fs;
@@ -35,6 +60,10 @@ struct Registers {
   u32 edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha.
   u32 int_no, err_code;    // Interrupt number and error code (if applicable)
   u32 eip, cs, eflags, useresp, ss; // Pushed by the processor automatically.
+
+  PageFaultCode page_fault_code() {
+    return PageFaultCode(err_code);
+  }
 };
 
 namespace interrupt {

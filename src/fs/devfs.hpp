@@ -36,6 +36,10 @@ namespace devfs {
     int ioctl(unsigned long req, va_list args) {
       return char_dev->ioctl(req, args);
     }
+
+    int close() {
+      return 0;
+    }
   };
 
   class RegisteredFS : public fs::RegisteredFS {

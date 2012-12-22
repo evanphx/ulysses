@@ -9,12 +9,28 @@
 #include "fs.hpp"
 #include "fs/devfs.hpp"
 
-Process::Process(int pid)
+Process::Process(int pid, Process* parent)
   : pid_(pid)
+  , pgrp_(pid)
+  , session_(pid)
+  , uid_(0), euid_(0), suid_(0)
+  , gid_(0), egid_(0), sgid_(0)
   , break_mapping_(0)
   , thread_ids_(0)
   , next_mmap_start_(cDefaultMMapStart)
 {
+  if(parent) {
+    pgrp_ = parent->pgrp();
+    session_ = parent->session();
+
+    uid_  = parent->uid();
+    euid_ = parent->euid();
+    suid_ = parent->suid();
+    gid_  = parent->gid();
+    egid_ = parent->egid();
+    sgid_ = parent->sgid();
+  }
+
   for(int i = 0; i < 16; i++) {
     fds_[i] = 0;
   }

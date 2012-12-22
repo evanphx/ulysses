@@ -398,7 +398,7 @@ namespace ext2 {
     virtual u32 read(u32 offset, u32 size, u8* buffer);
     virtual u32 write(u32 offset, u32 size, u8* buffer);
     virtual void open();
-    virtual void close();
+    virtual int close();
     virtual struct dirent* readdir(u32 index);
     virtual Node* finddir(const char* name, int len);
   };

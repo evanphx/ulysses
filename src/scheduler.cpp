@@ -35,7 +35,7 @@ void Scheduler::init() {
   u32 mem = (u32)&initial_task;
 
   // Create process 0, the idle process.
-  Process* proc = new(kheap) Process(0);
+  Process* proc = new(kheap) Process(0,0);
   proc->directory = vmem.current_directory;
 
   processes_[proc->pid()] = proc;
@@ -197,7 +197,7 @@ int Scheduler::fork() {
   x86::PageDirectory* directory = vmem.clone_current();
 
   // Create a new process.
-  Process* proc = new(kheap) Process(new_pid());
+  Process* proc = new(kheap) Process(new_pid(), process());
   processes_[proc->pid()] = proc;
 
   proc->directory = directory;
@@ -230,7 +230,7 @@ int Scheduler::spawn_init(void (*func)(void)) {
   x86::PageDirectory* directory = vmem.new_directory();
 
   // Create a new process.
-  Process* proc = new(kheap) Process(1);
+  Process* proc = new(kheap) Process(1, 0);
   processes_[1] = proc;
 
   proc->directory = directory;
@@ -297,4 +297,17 @@ int Scheduler::new_pid() {
 
 int Scheduler::getpid() {
   return process()->pid();
+}
+
+Process* Scheduler::find_process(int pid) {
+  return processes_[pid];
+}
+
+int Scheduler::process_group(int pid) {
+  if(!pid) return process()->pgrp();
+
+  Process* proc = find_process(pid);
+  if(proc) return proc->pgrp();
+
+  return -1;
 }

@@ -161,7 +161,8 @@ SYSCALL(16, msg_recv, int cid, void* msg, int len) {
 }
 
 SYSCALL(18, notimpl, Registers* regs) {
-  console.printf("Unimplemented syscall used from %p\n", regs->eip);
+  console.printf("Unimplemented syscall used from %p: %p\n", regs->eip,
+                 regs->ebx);
   return -1;
 }
 
@@ -211,6 +212,73 @@ SYSCALL(25, set_tid_address, int* addr) {
   return 0;
 }
 
+SYSCALL(26, kill, int pid, int sig) {
+  return 0;
+}
+
+SYSCALL(27, getpgrp) {
+  return scheduler.process_group();
+}
+
+SYSCALL(29, geteuid) {
+  return scheduler.euid();
+}
+
+SYSCALL(30, getppid, int pid) {
+  return scheduler.process_group(pid);
+}
+
+SYSCALL(31, getcwd, char* buf, int size) {
+  buf[0] = '/';
+  buf[1] = 0;
+
+  return 0;
+}
+
+SYSCALL(32, rt_sigaction, int sig, void* set, void* old, int mask_size) {
+  return 0;
+}
+
+SYSCALL(33, fcntl, int fd, int cmd, void* arg) {
+  console.printf("fcntl of '%d': %d\n", cmd);
+  return -1;
+}
+
+SYSCALL(34, close, int fd) {
+  if(fs::File* file = scheduler.process()->get_file(fd)) {
+    return file->close();
+  } else {
+    return -1;
+  }
+}
+
+
+/*
+struct stat {
+	dev_t st_dev;
+	int __st_dev_padding;
+	long __st_ino_truncated;
+	mode_t st_mode;
+	nlink_t st_nlink;
+	uid_t st_uid;
+	gid_t st_gid;
+	dev_t st_rdev;
+	int __st_rdev_padding;
+	off_t st_size;
+	blksize_t st_blksize;
+	blkcnt_t st_blocks;
+	struct timespec st_atim;
+	struct timespec st_mtim;
+	struct timespec st_ctim;
+	ino_t st_ino;
+};
+*/
+
+SYSCALL(28, stat, char* path, struct stat* info) {
+  console.printf("Trying to stat '%s'\n");
+  return -1;
+}
+
 const char* syscall_name(int idx);
 
 #include "syscall_tramp.incl.hpp"
@@ -233,7 +301,7 @@ public:
 
       ((void (*)(Registers*))location)(regs);
     } else {
-      console.printf("bad syscall\n");
+      console.printf("bad syscall: %d\n", regs->eax);
     }
   }
 };

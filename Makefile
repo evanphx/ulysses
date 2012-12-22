@@ -24,6 +24,9 @@ sys/tar_disk: sys/test
 sys/dyn_tar_disk: sys/test-dyn
 	cd sys; cp test-dyn test; tar czvf dyn_tar_disk test link.so; rm test
 
+sys/dash_disk: sys/link.so
+	cd sys; tar czvf dash_disk dash link.so
+
 sys/test: sys/test.c
 	cd sys; ${LCC} -static -o test test.c
 
