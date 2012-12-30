@@ -6,6 +6,8 @@
 #include "constants.hpp"
 #include "common.hpp"
 
+#include "character/console.hpp"
+
 class Scheduler {
 public:
   Thread* current;
@@ -16,7 +18,12 @@ private:
   Process* processes_[constants::cMaxProcesses];
   Process::CleanupList cleanup_;
   Thread::RunList ready_queue_;
+
+  sys::ExternalList<Thread*> hiprio_threads_;
+
   Thread* idle_thread_;
+
+  console_driver::ConsoleDevice* console_;
 
 public:
 
@@ -24,14 +31,14 @@ public:
 
   int new_pid();
 
-  void make_ready(Thread* task) {
-    task->state = Thread::eReady;
-    ready_queue_.prepend(task);
+  void make_ready(Thread* thread) {
+    thread->state_ = Thread::eReady;
+    ready_queue_.prepend(thread);
   }
 
-  void make_wait(Thread* task) {
-    task->state = Thread::eWaiting;
-    waiting_queue.prepend(task);
+  void make_wait(Thread* thread) {
+    thread->state_ = Thread::eWaiting;
+    waiting_queue.prepend(thread);
   }
 
   Process* process() {
@@ -46,15 +53,24 @@ public:
     waiting_queue.unlink(thr);
   }
 
+  PosixSession& session() {
+    return process()->session();
+  }
+
   int euid() {
-    return process()->euid();
+    return process()->session().euid();
+  }
+
+  void set_console(console_driver::ConsoleDevice* dev) {
+    console_ = dev;
   }
 
   void cleanup();
-  void switch_task();
+  bool switch_thread();
+  bool switch_to_hiprio();
   int fork();
 
-  int spawn_thread(void (*func)(void));
+  Thread* spawn_thread(void (*func)(void));
   int spawn_init(void (*func)(void));
 
   void exit(int code);
@@ -74,6 +90,10 @@ public:
 
   int process_group(int pid=0);
   int process_id();
+
+  void process_keyboard();
+
+  void schedule_hiprio(Thread* thr);
 };
 
 extern Scheduler scheduler;

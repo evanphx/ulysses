@@ -4,6 +4,8 @@
 
 #include "monitor.hpp"
 #include "paging.hpp"
+#include "thread.hpp"
+#include "process.hpp"
 
 Console console = { (u16*)(0xB8000 + KERNEL_VIRTUAL_BASE), {0x3D4}, {0x3D5}, 0, 0 };
 
@@ -266,6 +268,19 @@ void Console::printf(const char* fmt, ...) {
   va_end(ap);
 }
 
+void Console::alert(const char* fmt, ...) {
+  puts("[ALERT] ");
+
+  va_list ap;
+  va_start(ap, fmt);
+
+  vprintf(fmt, ap);
+
+  va_end(ap);
+
+  put('\n');
+}
+
 static int hex_width(int n) {
   int width = 1;
 
@@ -410,10 +425,26 @@ retry:
       case 'l':
         is_long++;
         goto retry;
+
+      // custom
+      case 't':
+        {
+          Thread* t = va_arg(ap, Thread*);
+          write("<Thread:0x");
+          write_hex_np((int)t);
+          write(" (");
+          write_dec(t->process()->pid());
+          write(":");
+          write_dec(t->id());
+          write(") at ");
+          write_hex_np(t->regs.eip);
+          write(">");
+        }
+        break;
+
       // Ignore these for now.
       case 'h':
       case 'j':
-      case 't':
       case 'z':
         goto retry;
       case '0':

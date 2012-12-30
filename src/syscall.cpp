@@ -63,7 +63,7 @@ SYSCALL(2, getpid) {
 }
 
 SYSCALL(3, pause) {
-  scheduler.switch_task();
+  scheduler.switch_thread();
   return 0;
 }
 
@@ -240,7 +240,7 @@ SYSCALL(32, rt_sigaction, int sig, void* set, void* old, int mask_size) {
 }
 
 SYSCALL(33, fcntl, int fd, int cmd, void* arg) {
-  console.printf("fcntl of '%d': %d\n", cmd);
+  console.printf("fcntl of '%d': %x, %x\n", cmd, arg);
   return -1;
 }
 

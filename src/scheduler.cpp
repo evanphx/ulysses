@@ -8,6 +8,8 @@
 #include "fs.hpp"
 #include "fs/devfs.hpp"
 
+#include "keyboard.hpp"
+
 Scheduler scheduler;
 
 extern "C" void* save_registers(volatile Thread::SavedRegisters*);
@@ -34,8 +36,10 @@ void Scheduler::init() {
   // Initialise the first thread (kernel thread)
   u32 mem = (u32)&initial_task;
 
+  PosixSession init_session(PosixSession::Init);
+
   // Create process 0, the idle process.
-  Process* proc = new(kheap) Process(0,0);
+  Process* proc = new(kheap) Process(0,init_session);
   proc->directory = vmem.current_directory;
 
   processes_[proc->pid()] = proc;
@@ -44,7 +48,7 @@ void Scheduler::init() {
   current->directory = vmem.current_directory;
   current->kernel_stack = mem + KERNEL_STACK_SIZE;
 
-  current->state = Thread::eReady;
+  current->state_ = Thread::eReady;
 
   idle_thread_ = current;
 
@@ -71,33 +75,41 @@ void Scheduler::on_tick() {
 
   bool schedule = false;
   while(i.more_p()) {
-    Thread* task = i.advance();
+    Thread* thread = i.advance();
 
-    if(task->alarm_expired()) {
-      waiting_queue.unlink(task);
-      make_ready(task);
+    if(thread->alarm_expired()) {
+      waiting_queue.unlink(thread);
+      make_ready(thread);
       schedule = true;
     }
   }
 
-  if(schedule) switch_task();
+  if(schedule) switch_thread();
 }
 
-void Scheduler::switch_task() {
-  // If we haven't initialised tasking yet, just return.
-  if(!current) return;
+bool Scheduler::switch_thread() {
+  // If we haven't initialised threading yet, just return.
+  if(!current) return false;
+
+  // We are modifying kernel structures, and so cannot be interrupted.
+  int st = cpu::disable_interrupts();
 
   // Save the current registers into the current.
   //
   // This routine will return twice. Once after we initially call it
-  // and other time when the current task is being resumed. We detect
+  // and other time when the current thread is being resumed. We detect
   // that happening by checking if the returned value is &second_return;
   void* val = save_registers((Thread::SavedRegisters*)&current->regs);
 
-  // Have we just switched tasks?
-  if(val == &second_return) return;
-
   Thread* next = 0;
+
+  bool switched = false;
+
+  // Have we just switched threads?
+  if(val == &second_return) {
+    switched = true;
+    goto done;
+  }
 
   if(ready_queue_.count() == 0) {
     next = idle_thread_;
@@ -107,11 +119,13 @@ void Scheduler::switch_task() {
 
   ASSERT(next);
 
-  if(next == current) return;
+  if(next == current) goto done;
 
-  // Move it to the end
-  ready_queue_.unlink(next);
-  ready_queue_.append(next);
+  if(next != idle_thread_) {
+    // Move it to the end
+    ready_queue_.unlink(next);
+    ready_queue_.append(next);
+  }
 
   current = next;
 
@@ -127,6 +141,70 @@ void Scheduler::switch_task() {
   // This will cause save_registers to return for a second time and
   // the return value will be &second_return;
   restore_registers(&current->regs, vmem.current_directory->physicalAddr);
+
+done:
+  cpu::restore_interrupts(st);
+
+  return switched;
+}
+
+void Scheduler::schedule_hiprio(Thread* thr) {
+  if(current == thr) return;
+  hiprio_threads_.append(thr);
+}
+
+void Scheduler::process_keyboard() {
+  if(!console_) return;
+
+  Buffer& buffer = keyboard.buffer();
+  if(!buffer.has_data_p()) return;
+
+  console_->inject_bytes(buffer);
+
+  buffer.clear();
+}
+
+bool Scheduler::switch_to_hiprio() {
+  if(hiprio_threads_.count() == 0) return false;
+
+  // If we haven't initialised threading yet, just return.
+  if(!current) return false;
+
+  // We are modifying kernel structures, and so cannot be interrupted.
+  int st = cpu::disable_interrupts();
+
+  // Save the current registers into the current.
+  //
+  // This routine will return twice. Once after we initially call it
+  // and other time when the current thread is being resumed. We detect
+  // that happening by checking if the returned value is &second_return;
+  void* val = save_registers((Thread::SavedRegisters*)&current->regs);
+
+  if(val == &second_return) {
+    cpu::restore_interrupts(st);
+    return true;
+  }
+
+  console.printf("switch to hiprio thread: %d\n", hiprio_threads_.count());
+
+  Thread* next = hiprio_threads_.head();
+  hiprio_threads_.remove(next);
+
+  // Move it to the end
+  ready_queue_.unlink(current);
+  ready_queue_.append(current);
+
+  current = next;
+
+  // Make sure the memory manager knows we've changed page directory.
+  vmem.current_directory = current->directory;
+
+  // Change our kernel stack over.
+  set_kernel_stack(current->kernel_stack);
+
+  restore_registers(&current->regs, vmem.current_directory->physicalAddr);
+
+  return false;
 }
 
 void Scheduler::exit(int code) {
@@ -142,7 +220,7 @@ void Scheduler::exit(int code) {
 
   cpu::restore_interrupts(st);
 
-  switch_task();
+  switch_thread();
 }
 
 int Scheduler::wait_any(int *status) {
@@ -167,14 +245,14 @@ void Scheduler::sleep(int secs) {
 
   cpu::restore_interrupts(st);
 
-  switch_task();
+  switch_thread();
 }
 
 void Scheduler::io_wait() {
   // We are modifying kernel structures, and so cannot be interrupted.
   cpu::disable_interrupts();
 
-  current->state = Thread::eIOWait;
+  current->state_ = Thread::eIOWait;
 
   ASSERT(getpid() != 0);
 
@@ -184,7 +262,7 @@ void Scheduler::io_wait() {
 
   ASSERT(cpu::interrupts_enabled_p());
 
-  switch_task();
+  switch_thread();
 
   cpu::disable_interrupts();
 }
@@ -197,21 +275,21 @@ int Scheduler::fork() {
   x86::PageDirectory* directory = vmem.clone_current();
 
   // Create a new process.
-  Process* proc = new(kheap) Process(new_pid(), process());
+  Process* proc = new(kheap) Process(new_pid(), session());
   processes_[proc->pid()] = proc;
 
   proc->directory = directory;
 
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
-  Thread* new_task = proc->new_thread((void*)mem);
-  new_task->directory = directory;
+  Thread* new_thread = proc->new_thread((void*)mem);
+  new_thread->directory = directory;
 
-  new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
+  new_thread->kernel_stack = mem + KERNEL_STACK_SIZE;
 
-  make_ready(new_task);
+  make_ready(new_thread);
 
-  if(save_registers(&new_task->regs) != &second_return) {
+  if(save_registers(&new_thread->regs) != &second_return) {
     // All finished: Reenable interrupts.
     cpu::restore_interrupts(st);
 
@@ -230,24 +308,24 @@ int Scheduler::spawn_init(void (*func)(void)) {
   x86::PageDirectory* directory = vmem.new_directory();
 
   // Create a new process.
-  Process* proc = new(kheap) Process(1, 0);
+  Process* proc = new(kheap) Process(1, session());
   processes_[1] = proc;
 
   proc->directory = directory;
 
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
-  Thread* new_task = proc->new_thread((void*)mem);
-  new_task->directory = directory;
-  new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
+  Thread* new_thread = proc->new_thread((void*)mem);
+  new_thread->directory = directory;
+  new_thread->kernel_stack = mem + KERNEL_STACK_SIZE;
 
-  proc->add_thread(new_task);
+  proc->add_thread(new_thread);
 
-  make_ready(new_task);
+  make_ready(new_thread);
 
-  save_registers(&new_task->regs);
-  new_task->regs.eip = (u32)func;
-  new_task->regs.esp = new_task->kernel_stack;
+  save_registers(&new_thread->regs);
+  new_thread->regs.eip = (u32)func;
+  new_thread->regs.esp = new_thread->kernel_stack;
 
   // All finished: Reenable interrupts.
   cpu::restore_interrupts(st);
@@ -255,7 +333,7 @@ int Scheduler::spawn_init(void (*func)(void)) {
   return proc->pid();
 }
 
-int Scheduler::spawn_thread(void (*func)()) {
+Thread* Scheduler::spawn_thread(void (*func)()) {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
 
@@ -265,23 +343,19 @@ int Scheduler::spawn_thread(void (*func)()) {
   // Create a new process.
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
-  Thread* new_task = process()->new_thread((void*)mem);
-  new_task->directory = directory;
-  new_task->kernel_stack = mem + KERNEL_STACK_SIZE;
+  Thread* new_thread = process()->new_thread((void*)mem);
+  new_thread->directory = directory;
+  new_thread->kernel_stack = mem + KERNEL_STACK_SIZE;
 
-  make_ready(new_task);
-
-  save_registers(&new_task->regs);
-  new_task->regs.eip = (u32)func;
-  new_task->regs.esp = new_task->kernel_stack;
+  save_registers(&new_thread->regs);
+  new_thread->regs.eip = (u32)func;
+  new_thread->regs.esp = new_thread->kernel_stack;
 
   // All finished: Reenable interrupts.
   cpu::restore_interrupts(st);
 
-  // And by convention return the PID of the child.
-  return process()->pid();
+  return new_thread;
 }
-
 
 int Scheduler::new_pid() {
   for(int i = 0; i < constants::cMaxProcesses; i++) {
@@ -304,10 +378,10 @@ Process* Scheduler::find_process(int pid) {
 }
 
 int Scheduler::process_group(int pid) {
-  if(!pid) return process()->pgrp();
+  if(!pid) return session().pgrp();
 
   Process* proc = find_process(pid);
-  if(proc) return proc->pgrp();
+  if(proc) return proc->session().pgrp();
 
   return -1;
 }

@@ -40,6 +40,10 @@ namespace devfs {
     int close() {
       return 0;
     }
+
+    void open() {
+      char_dev->open();
+    }
   };
 
   class RegisteredFS : public fs::RegisteredFS {

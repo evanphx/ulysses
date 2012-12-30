@@ -118,12 +118,18 @@ int main(int argc, char** argv, char** environ) {
   const char* msg = "console from userspace!\n";
   write(sout, msg, strlen(msg));
 
+  char buf[256];
+
+  int got = read(0, buf, 255);
+  buf[got] = 0;
+
+  printf("read %d bytes from console\n", got);
+  printf("got from console: '%s'\n", buf);
+
   /* printf("tmp file is %d\n", tmp); */
   /* printf("stack is at %x\n", &sin); */
 
   write(tmp, msg, strlen(msg)+1);
-
-  char buf[256];
 
   int tmp2 = open("/tmp/blah", 0);
   read(tmp2, buf, strlen(msg)+1);

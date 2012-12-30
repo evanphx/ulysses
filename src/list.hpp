@@ -241,6 +241,22 @@ namespace sys {
       if(!tail_) tail_ = head_;
     }
 
+    bool shift(T* pos) {
+      if(!head_) return false;
+      Node* n = head_;
+
+      head_ = n->next;
+
+      if(head_) head_->prev = 0;
+      if(tail_ == n) tail_ = head_;
+
+      *pos = n->elem;
+
+      kfree(n);
+
+      return true;
+    }
+
     class Iterator {
       Node* node;
 

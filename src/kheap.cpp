@@ -245,7 +245,6 @@ void* Heap::alloc(u32 size, u8 page_align) {
       header->size += new_length - old_length;
       // Rewrite the footer.
       Heap::footer *footer = (Heap::footer *) ( (u32)header + header->size - sizeof(Heap::footer) );
-      console.printf("hdr->size = %d\n", header->size);
       footer->hdr = header;
       footer->magic = HEAP_MAGIC;
     }

@@ -13,6 +13,8 @@ namespace ipc {
 }
 
 class Process;
+class Registers;
+class Scheduler;
 
 class Thread {
 public:
@@ -24,6 +26,9 @@ public:
       : eip(0), esp(0), ebp(0)
       , edi(0), esi(0), ebx(0)
     {}
+
+    void set(Registers* regs);
+    void copy_to(Registers* regs);
   };
 
   enum State {
@@ -48,16 +53,18 @@ public:
   typedef sys::List<Thread, cChild> ChildList;
   typedef sys::List<Thread, cProcess> ProcessList;
 
+  friend class Scheduler;
+
 private:
   Process* process_;
   int id_;
+  State state_;
 
 public:
   Thread(Process* process, int id);
 
 public:
   SavedRegisters regs;
-  State state;
   x86::PageDirectory* directory;
   u32 kernel_stack;
 
@@ -71,7 +78,7 @@ public:
   }
 
   bool dead() {
-    return state == eDead;
+    return state_ == eDead;
   }
 
   Process* process() {

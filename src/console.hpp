@@ -30,6 +30,7 @@ struct Console {
   void write_dec(int n);
   void write_dec_ll(u64 n);
 
+  void alert(const char* fmt, ...);
   void printf(const char* fmt, ...);
   void vprintf(const char* fmt, va_list ap);
 

@@ -22,18 +22,36 @@ void Thread::sleep_til(int secs) {
 }
 
 bool Thread::alarm_expired() {
-  return state == Thread::eWaiting && 
+  return state_ == Thread::eWaiting && 
          alarm_at != 0 &&
          alarm_at <= timer.ticks;
 }
 
 void Thread::die() {
-  if(state == eWaiting) {
+  if(state_ == eWaiting) {
     scheduler.remove_from_waiting(this);
-  } else if(state == eReady) {
+  } else if(state_ == eReady) {
     scheduler.remove_from_ready(this);
   }
 
-  state = eDead;
+  state_ = eDead;
+}
+
+void Thread::SavedRegisters::set(Registers* regs) {
+  eip = regs->eip;
+  esp = regs->useresp;
+  ebp = regs->ebp;
+  edi = regs->edi;
+  esi = regs->esi;
+  ebx = regs->ebx;
+}
+
+void Thread::SavedRegisters::copy_to(Registers* regs) {
+  regs->eip = eip;
+  regs->useresp = esp;
+  regs->ebp = ebp;
+  regs->edi = edi;
+  regs->esi = esi;
+  regs->ebx = ebx;
 }
 

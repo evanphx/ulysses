@@ -7,6 +7,7 @@
 #include "common.hpp"
 #include "isr.hpp"
 #include "monitor.hpp"
+#include "scheduler.hpp"
 
 namespace interrupt {
   Handler* handlers[256];
@@ -35,9 +36,10 @@ extern "C" {
 
   // This gets called from our ASM interrupt handler stub.
   void isr_handler(Registers regs) {
-    // This line is important. When the processor extends the 8-bit interrupt number
-    // to a 32bit value, it sign-extends, not zero extends. So if the most significant
-    // bit (0x80) is set, regs.int_no will be very large (about 0xffffff80).
+    // This line is important. When the processor extends the 8-bit interrupt
+    // number to a 32bit value, it sign-extends, not zero extends.
+    // So if the most significant bit (0x80) is set, regs.int_no will be
+    // very large (about 0xffffff80).
     u8 int_no = regs.int_no & 0xFF;
     if(interrupt::handlers[int_no] != 0) {
       interrupt::Handler* handler = interrupt::handlers[int_no];
@@ -70,6 +72,7 @@ extern "C" {
       console.printf("unhandled interrupt: %d\n", regs.int_no - IRQ0);
     }
 
+    scheduler.process_keyboard();
   }
 
 }

@@ -6,6 +6,7 @@
 #include "list.hpp"
 #include "fs.hpp"
 #include "list.hpp"
+#include "session.hpp"
 
 class Process {
 public:
@@ -29,11 +30,8 @@ public:
 private:
   sys::ExternalList<Thread*> threads_;
   int pid_;
-  int pgrp_;
-  int session_;
 
-  int uid_, euid_, suid_;
-  int gid_, egid_, sgid_;
+  PosixSession session_;
 
   MMapList mmaps_;
 
@@ -54,38 +52,6 @@ public:
 
   int pid() {
     return pid_;
-  }
-
-  int pgrp() {
-    return pgrp_;
-  }
-
-  int session() {
-    return session_;
-  }
-
-  int uid() {
-    return uid_;
-  }
-
-  int euid() {
-    return euid_;
-  }
-
-  int suid() {
-    return suid_;
-  }
-
-  int gid() {
-    return gid_;
-  }
-
-  int egid() {
-    return egid_;
-  }
-
-  int sgid() {
-    return sgid_;
   }
 
   int find_fd() {
@@ -111,9 +77,13 @@ public:
     threads_.append(thr);
   }
 
+  PosixSession& session() {
+    return session_;
+  }
+
   void exit(int code);
 
-  Process(int pid, Process* parent);
+  Process(int pid, PosixSession& session);
 
   void add_mmap(fs::Node* node, u32 offset, u32 size, u32 addr,
                 u32 mem_size, int flags);

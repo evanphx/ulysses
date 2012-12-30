@@ -24,8 +24,8 @@
 
 #include "cpu.hpp"
 
-// const char* init_argv[] = { "/bin/init", "start", 0 };
-const char* init_argv[] = { "/dash", 0 };
+const char* init_argv[] = { "/bin/init", "start", 0 };
+// const char* init_argv[] = { "/dash", 0 };
 const char* init_envp[] = { "TERM=ulysses", "OS=ulysses", 0 };
 
 void run_init() {
@@ -35,7 +35,7 @@ void run_init() {
   syscall_dup(i);
   syscall_dup(i);
 
-  syscall_exec("dash", init_argv, init_envp);
+  syscall_exec("test", init_argv, init_envp);
 }
 
 extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
@@ -89,7 +89,7 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
 
   inspector.init(mboot_ptr);
 
-  // Start multitasking.
+  // Start multithreading.
   scheduler.init();
 
   keyboard.init();
@@ -121,14 +121,16 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
 
   scheduler.spawn_init(run_init);
 
-  // The idle task code. Reschedule forever and let
+  // The idle thread code. Reschedule forever and let
   // the cpu sleep between interrupts.
   for(;;) {
     scheduler.cleanup();
-    scheduler.switch_task();
+    scheduler.switch_thread();
     cpu::enable_interrupts();
     cpu::halt();
   }
+
+  console.printf("BUG! BUG BUG BUG BUG!\n");
 
   return 0;
 }

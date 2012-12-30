@@ -4,14 +4,9 @@
 
 #include "keyboard.hpp"
 
-Keyboard keyboard = {{0x60}, {0x64}};
+#include "scheduler.hpp"
 
-class KeyboardCallback : public interrupt::Handler {
-public:
-  void handle(Registers* regs) {
-    keyboard.pressed();
-  }
-};
+Keyboard keyboard;
 
 KeyboardKeyType Keyboard::mapping[128] = 
 {
@@ -109,7 +104,7 @@ const char Keyboard::dv_map[0x3a][2] = {
 
 
 void Keyboard::pressed() {
-  u8 scan_code = io.inb();
+  u8 scan_code = io_.inb();
 
   KeyboardKeyType type = mapping[scan_code & 0x7f];
 
@@ -118,17 +113,13 @@ void Keyboard::pressed() {
     break;
   case reg:
   case enter:
-    if(scan_code <= 0x7f) {
-      if(scan_code > 0x3a) {
-        console.printf("bad scan_code: %d\n", scan_code);
-      } else {
-        console.put(map[scan_code][shifted]);
-      }
+    if(scan_code <= 0x3a) {
+      put(map_[scan_code][shifted_]);
     }
     break;
   case lshift:
   case rshift:
-    shifted ^= 1;
+    shifted_ ^= 1;
     break;
   default:
     /* ignore */
@@ -136,9 +127,46 @@ void Keyboard::pressed() {
   }
 }
 
+void Keyboard::put(char keycode) {
+  if(!buffer_.put(keycode)) {
+    console.alert("Keyboard buffer overflowth!");
+  }
+}
+
+void Keyboard::in_thread() {
+  for(;;) {
+    console.printf("top of keyboard thread: %d\n", cpu::interrupts_enabled_p());
+    pressed();
+    ASSERT(scheduler.switch_thread());
+  }
+}
+
+void Keyboard::schedule_thread() {
+  console.printf("schedule keyboard thread\n");
+  scheduler.schedule_hiprio(thread_);
+}
+
+static void kbd_thread() {
+  keyboard.in_thread();
+}
+
+class KeyboardCallback : public interrupt::Handler {
+public:
+  void handle(Registers* regs) {
+    keyboard.pressed();
+  }
+};
+
 void Keyboard::init() {
-  shifted = 0;
-  map = dv_map;
+  io_.port = 0x60;
+  status_.port = 0x64;
+
+  shifted_ = 0;
+  map_ = dv_map;
+
+  buffer_.allocate(cDefaultBufferSize);
+
+  thread_ = scheduler.spawn_thread(kbd_thread);
 
   static KeyboardCallback callback;
   interrupt::register_interrupt(1, &callback);
