@@ -24,7 +24,9 @@
 
 #include "cpu.hpp"
 
-const char* init_argv[] = { "/bin/init", "start", 0 };
+const char* init_path = "/bin/init";
+
+const char* init_argv[] = { init_path, 0};
 // const char* init_argv[] = { "/dash", 0 };
 const char* init_envp[] = { "TERM=ulysses", "OS=ulysses", 0 };
 
@@ -35,7 +37,19 @@ void run_init() {
   syscall_dup(i);
   syscall_dup(i);
 
-  syscall_exec("test", init_argv, init_envp);
+  syscall_exec(init_path, init_argv, init_envp);
+}
+
+static void process_cmdline(char* cmdline) {
+  char* pos = cmdline;
+  while(*pos) {
+    if(*pos == ' ') {
+      init_path = pos+1;
+      return;
+    }
+
+    pos++;
+  }
 }
 
 extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
@@ -63,7 +77,12 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
 
   u32 kernel_size = kend - kstart;
 
+  char* cmdline = (char*)(mboot_ptr->cmdline + KERNEL_VIRTUAL_BASE);
+
   console.printf("Kernel %x-%x : %d\n", kstart, kend, kernel_size);
+  console.printf("Command Line: %s\n", cmdline);
+
+  process_cmdline(cmdline);
 
   // Initialise the PIT to 100Hz
   cpu::enable_interrupts();

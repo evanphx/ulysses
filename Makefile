@@ -37,8 +37,12 @@ sys/link.so: libc
 	cp sys/local/lib/libc.so sys/link.so
 
 run:
-	qemu-system-x86_64 -kernel src/kernel -initrd sys/tar_disk -hda scratch/words_disk
+	qemu-system-x86_64 -kernel src/kernel -initrd sys/tar_disk -hda scratch/words_disk -append test
 
 rundyn:
-	qemu-system-x86_64 -kernel src/kernel -initrd sys/dyn_tar_disk -hda scratch/words_disk
+	qemu-system-x86_64 -kernel src/kernel -initrd sys/dyn_tar_disk -hda scratch/words_disk -append test
+
+rundash:
+	qemu-system-x86_64 -kernel src/kernel -initrd sys/dash_disk -hda scratch/words_disk -append dash
+
 full: libc test all
