@@ -14,7 +14,8 @@ Scheduler scheduler;
 
 extern "C" void* save_registers(volatile Thread::SavedRegisters*);
 extern "C" void restore_registers(volatile Thread::SavedRegisters*, u32);
-extern "C" void second_return();
+
+extern "C" void new_thread_tramp();
 
 extern "C" u8 initial_task;
 
@@ -94,22 +95,13 @@ bool Scheduler::switch_thread() {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
 
-  // Save the current registers into the current.
-  //
-  // This routine will return twice. Once after we initially call it
-  // and other time when the current thread is being resumed. We detect
-  // that happening by checking if the returned value is &second_return;
-  void* val = save_registers((Thread::SavedRegisters*)&current->regs);
+  if(save_registers(&current->regs)) {
+    cpu::restore_interrupts(st);
+    return true;
+  }
 
   Thread* next = 0;
-
   bool switched = false;
-
-  // Have we just switched threads?
-  if(val == &second_return) {
-    switched = true;
-    goto done;
-  }
 
   if(ready_queue_.count() == 0) {
     next = idle_thread_;
@@ -127,6 +119,8 @@ bool Scheduler::switch_thread() {
     ready_queue_.append(next);
   }
 
+  switched = true;
+
   current = next;
 
   // Make sure the memory manager knows we've changed page directory.
@@ -135,11 +129,6 @@ bool Scheduler::switch_thread() {
   // Change our kernel stack over.
   set_kernel_stack(current->kernel_stack);
 
-  // Copy the registers in current->regs back to the machine
-  // and jump to the eip held in regs.eip.
-  //
-  // This will cause save_registers to return for a second time and
-  // the return value will be &second_return;
   restore_registers(&current->regs, vmem.current_directory->physicalAddr);
 
 done:
@@ -162,49 +151,6 @@ void Scheduler::process_keyboard() {
   console_->inject_bytes(buffer);
 
   buffer.clear();
-}
-
-bool Scheduler::switch_to_hiprio() {
-  if(hiprio_threads_.count() == 0) return false;
-
-  // If we haven't initialised threading yet, just return.
-  if(!current) return false;
-
-  // We are modifying kernel structures, and so cannot be interrupted.
-  int st = cpu::disable_interrupts();
-
-  // Save the current registers into the current.
-  //
-  // This routine will return twice. Once after we initially call it
-  // and other time when the current thread is being resumed. We detect
-  // that happening by checking if the returned value is &second_return;
-  void* val = save_registers((Thread::SavedRegisters*)&current->regs);
-
-  if(val == &second_return) {
-    cpu::restore_interrupts(st);
-    return true;
-  }
-
-  console.printf("switch to hiprio thread: %d\n", hiprio_threads_.count());
-
-  Thread* next = hiprio_threads_.head();
-  hiprio_threads_.remove(next);
-
-  // Move it to the end
-  ready_queue_.unlink(current);
-  ready_queue_.append(current);
-
-  current = next;
-
-  // Make sure the memory manager knows we've changed page directory.
-  vmem.current_directory = current->directory;
-
-  // Change our kernel stack over.
-  set_kernel_stack(current->kernel_stack);
-
-  restore_registers(&current->regs, vmem.current_directory->physicalAddr);
-
-  return false;
 }
 
 void Scheduler::exit(int code) {
@@ -289,7 +235,7 @@ int Scheduler::fork() {
 
   make_ready(new_thread);
 
-  if(save_registers(&new_thread->regs) != &second_return) {
+  if(save_registers(&new_thread->regs) == 0) {
     // All finished: Reenable interrupts.
     cpu::restore_interrupts(st);
 
@@ -299,6 +245,21 @@ int Scheduler::fork() {
     // We are the child - by convention return 0.
     return 0;
   }
+}
+
+extern "C" void start_new_thread(void (*func)(), Thread* th) {
+  scheduler.start_new_thread(func, th);
+}
+
+void Scheduler::start_new_thread(void (*func)(), Thread* th) {
+  cpu::enable_interrupts();
+
+  func();
+
+  ready_queue_.unlink(current);
+
+  // TODO cleanup th somehow
+  switch_thread();
 }
 
 int Scheduler::spawn_init(void (*func)(void)) {
@@ -324,8 +285,10 @@ int Scheduler::spawn_init(void (*func)(void)) {
   make_ready(new_thread);
 
   save_registers(&new_thread->regs);
-  new_thread->regs.eip = (u32)func;
+  new_thread->regs.eip = (u32)new_thread_tramp;
   new_thread->regs.esp = new_thread->kernel_stack;
+  new_thread->regs.ebp = (u32)func;
+  new_thread->regs.ebx = (u32)new_thread;
 
   // All finished: Reenable interrupts.
   cpu::restore_interrupts(st);
@@ -348,8 +311,9 @@ Thread* Scheduler::spawn_thread(void (*func)()) {
   new_thread->kernel_stack = mem + KERNEL_STACK_SIZE;
 
   save_registers(&new_thread->regs);
-  new_thread->regs.eip = (u32)func;
+  new_thread->regs.eip = (u32)new_thread_tramp;
   new_thread->regs.esp = new_thread->kernel_stack;
+  new_thread->regs.ebp = (u32)func;
 
   // All finished: Reenable interrupts.
   cpu::restore_interrupts(st);

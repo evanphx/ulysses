@@ -5,8 +5,11 @@
 #include "process.hpp"
 #include "constants.hpp"
 #include "common.hpp"
+#include "spinlock.hpp"
 
 #include "character/console.hpp"
+
+extern "C" void start_new_thread(void (*func)(), Thread* th);
 
 class Scheduler {
 public:
@@ -67,9 +70,9 @@ public:
 
   void cleanup();
   bool switch_thread();
-  bool switch_to_hiprio();
   int fork();
 
+  void start_new_thread(void (*func)(), Thread* th);
   Thread* spawn_thread(void (*func)(void));
   int spawn_init(void (*func)(void));
 

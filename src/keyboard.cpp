@@ -146,9 +146,9 @@ void Keyboard::schedule_thread() {
   scheduler.schedule_hiprio(thread_);
 }
 
-static void kbd_thread() {
-  keyboard.in_thread();
-}
+// static void kbd_thread() {
+  // keyboard.in_thread();
+// }
 
 class KeyboardCallback : public interrupt::Handler {
 public:
@@ -166,7 +166,7 @@ void Keyboard::init() {
 
   buffer_.allocate(cDefaultBufferSize);
 
-  thread_ = scheduler.spawn_thread(kbd_thread);
+  // thread_ = scheduler.spawn_thread(kbd_thread);
 
   static KeyboardCallback callback;
   interrupt::register_interrupt(1, &callback);

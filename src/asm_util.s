@@ -23,18 +23,18 @@ second_return:   ; A dummy symbol that should not be executed.
 [GLOBAL save_registers]
 save_registers:
     mov edx, [esp+4]
-    pop eax             ; where to return to
-    mov [edx+0],  eax   ; eip
+    pop ecx             ; where to return to
+    mov [edx+0],  ecx   ; eip
     mov [edx+4],  esp
     mov [edx+8],  ebp
     mov [edx+12], edi
     mov [edx+16], esi
     mov [edx+20], ebx
-    jmp eax
+    mov eax, 0
+    jmp ecx
 
 [GLOBAL restore_registers]
 restore_registers:
-  cli
   mov eax, [esp+8]
   mov edx, [esp+4]
 
@@ -46,9 +46,19 @@ restore_registers:
   mov ebx, [edx+20]
 
   mov cr3, eax
-  mov eax, dword second_return
-  sti
+  mov eax, 1
   jmp ecx
+
+extern start_new_thread
+
+[GLOBAL new_thread_tramp]
+new_thread_tramp:
+  mov eax, ebp
+  xor ebp, ebp
+  push ebx
+  push eax
+  push ebp
+  jmp start_new_thread
 
 [GLOBAL copy_page_physical]
 copy_page_physical:
