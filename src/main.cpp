@@ -26,8 +26,7 @@
 
 const char* init_path = "/bin/init";
 
-const char* init_argv[] = { init_path, 0};
-// const char* init_argv[] = { "/dash", 0 };
+const char* init_argv[] = {0, 0};
 const char* init_envp[] = { "TERM=ulysses", "OS=ulysses", 0 };
 
 void run_init() {
@@ -83,6 +82,8 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
   console.printf("Command Line: %s\n", cmdline);
 
   process_cmdline(cmdline);
+
+  init_argv[0] = init_path;
 
   // Initialise the PIT to 100Hz
   cpu::enable_interrupts();

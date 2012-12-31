@@ -314,6 +314,7 @@ Thread* Scheduler::spawn_thread(void (*func)()) {
   new_thread->regs.eip = (u32)new_thread_tramp;
   new_thread->regs.esp = new_thread->kernel_stack;
   new_thread->regs.ebp = (u32)func;
+  new_thread->regs.ebx = (u32)new_thread;
 
   // All finished: Reenable interrupts.
   cpu::restore_interrupts(st);
