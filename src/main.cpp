@@ -23,6 +23,7 @@
 #include "inspector.hpp"
 
 #include "cpu.hpp"
+#include "percpu.hpp"
 
 const char* init_path = "/bin/init";
 
@@ -51,9 +52,16 @@ static void process_cmdline(char* cmdline) {
   }
 }
 
+PerCPU primary_percpu;
+
 extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 kend) {
   // Initialise all the ISRs and segmentation
   init_descriptor_tables();
+
+  primary_percpu.thread_id = 0;
+
+  // set_fs((u32)&primary_percpu, sizeof(PerCPU));
+
   // Initialise the screen (by clearing it)
   // console.clear();
   console.setup();
@@ -104,8 +112,12 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
       initrd_location, initrd_end-1,
       initrd_end - initrd_location);
 
+  console.printf("here\n");
+
   // Start paging.
   vmem.init(mem_total, kstart, kend, initrd_end);
+
+  cpu::halt_loop();
 
   inspector.init(mboot_ptr);
 
