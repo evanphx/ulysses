@@ -69,7 +69,6 @@ public:
   }
 
   void cleanup();
-  bool switch_thread();
   int fork();
 
   void start_new_thread(void (*func)(), Thread* th);
@@ -97,6 +96,12 @@ public:
   void process_keyboard();
 
   void schedule_hiprio(Thread* thr);
+
+  void on_idle();
+  void yield();
+
+private:
+  bool switch_thread();
 };
 
 extern Scheduler scheduler;

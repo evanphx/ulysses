@@ -51,6 +51,10 @@ void Scheduler::init() {
 
   current->state_ = Thread::eReady;
 
+  cpu::set_thread(current);
+
+  ASSERT(current == cpu::read_thread());
+
   idle_thread_ = current;
 
   // Reenable interrupts.
@@ -88,6 +92,15 @@ void Scheduler::on_tick() {
   if(schedule) switch_thread();
 }
 
+void Scheduler::on_idle() {
+  cleanup();
+  switch_thread();
+}
+
+void Scheduler::yield() {
+  switch_thread();
+}
+
 bool Scheduler::switch_thread() {
   // If we haven't initialised threading yet, just return.
   if(!current) return false;
@@ -122,6 +135,7 @@ bool Scheduler::switch_thread() {
   switched = true;
 
   current = next;
+  cpu::set_thread(current);
 
   // Make sure the memory manager knows we've changed page directory.
   vmem.current_directory = current->directory;

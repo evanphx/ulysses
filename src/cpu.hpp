@@ -1,6 +1,8 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
+class Thread;
+
 namespace cpu {
 
   extern "C" u32 read_flags();
@@ -80,13 +82,13 @@ namespace cpu {
     set_page_directory(page_directory());
   }
 
-  static inline u32 read_tid() {
+  static inline Thread* read_thread() {
     u32 addr;
     asm volatile("mov %%fs:0x0, %0" : "=r" (addr));
-    return addr;
+    return (Thread*)addr;
   }
 
-  static inline void set_tid(u32 tid) {
+  static inline void set_thread(Thread* tid) {
     asm volatile("mov %0, %%fs:0x0" :: "r" (tid));
   }
 

@@ -58,9 +58,9 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
   // Initialise all the ISRs and segmentation
   init_descriptor_tables();
 
-  primary_percpu.thread_id = 0;
+  primary_percpu.thread = 0;
 
-  // set_fs((u32)&primary_percpu, sizeof(PerCPU));
+  set_fs((u32)&primary_percpu, sizeof(PerCPU));
 
   // Initialise the screen (by clearing it)
   // console.clear();
@@ -117,8 +117,6 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
   // Start paging.
   vmem.init(mem_total, kstart, kend, initrd_end);
 
-  cpu::halt_loop();
-
   inspector.init(mboot_ptr);
 
   // Start multithreading.
@@ -156,8 +154,7 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
   // The idle thread code. Reschedule forever and let
   // the cpu sleep between interrupts.
   for(;;) {
-    scheduler.cleanup();
-    scheduler.switch_thread();
+    scheduler.on_idle();
     cpu::enable_interrupts();
     cpu::halt();
   }

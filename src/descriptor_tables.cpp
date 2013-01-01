@@ -26,7 +26,7 @@ static void gdt_set_gate(s32int,u32int,u32int,u8int,u8int);
 static void idt_set_gate(u8int,u32int,u16int,u8int);
 static void write_tss(s32int,u16int,u32int);
 
-#define GDT_ENTRIES 7
+#define GDT_ENTRIES 8
 
 gdt_entry_t gdt_entries[GDT_ENTRIES];
 gdt_ptr_t   gdt_ptr;
@@ -61,12 +61,18 @@ static void init_gdt() {
   // gdt_set_gate(5, base, limit, 0xF2, 0xCF); // User mode tlb segment
 
   write_tss(6, 0x10, 0x0);
+  gdt_set_gate(7, 0, 0,          0x92, 0xCF); // Percpu segment
   gdt_flush((u32int)&gdt_ptr);
   tss_flush();
 }
 
 u32 set_gs(u32 base, u32 limit) {
   gdt_set_gate(5, base, limit, 0xF2, 0xCF);
+  return 5;
+}
+
+u32 set_fs(u32 base, u32 limit) {
+  gdt_set_gate(7, base, limit, 0xF2, 0xCF);
   return 5;
 }
 

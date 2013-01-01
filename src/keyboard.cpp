@@ -133,23 +133,6 @@ void Keyboard::put(char keycode) {
   }
 }
 
-void Keyboard::in_thread() {
-  for(;;) {
-    console.printf("top of keyboard thread: %d\n", cpu::interrupts_enabled_p());
-    pressed();
-    ASSERT(scheduler.switch_thread());
-  }
-}
-
-void Keyboard::schedule_thread() {
-  console.printf("schedule keyboard thread\n");
-  scheduler.schedule_hiprio(thread_);
-}
-
-// static void kbd_thread() {
-  // keyboard.in_thread();
-// }
-
 class KeyboardCallback : public interrupt::Handler {
 public:
   void handle(Registers* regs) {
@@ -165,8 +148,6 @@ void Keyboard::init() {
   map_ = dv_map;
 
   buffer_.allocate(cDefaultBufferSize);
-
-  // thread_ = scheduler.spawn_thread(kbd_thread);
 
   static KeyboardCallback callback;
   interrupt::register_interrupt(1, &callback);

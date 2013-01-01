@@ -28,8 +28,6 @@ class Keyboard {
 
   const char (*map_)[2];
 
-  Thread* thread_;
-
   Buffer buffer_;
 
 public:
@@ -38,8 +36,6 @@ public:
     return buffer_;
   }
 
-  void schedule_thread();
-  void in_thread();
   void pressed();
   void init();
 

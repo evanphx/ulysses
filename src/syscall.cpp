@@ -63,7 +63,7 @@ SYSCALL(2, getpid) {
 }
 
 SYSCALL(3, pause) {
-  scheduler.switch_thread();
+  scheduler.yield();
   return 0;
 }
 

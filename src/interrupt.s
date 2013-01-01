@@ -102,8 +102,10 @@ isr_common_stub:
     mov ax, 0x10  ; load the kernel data segment descriptor
     mov ds, ax
     mov es, ax
-    mov fs, ax
     mov gs, ax
+
+    mov ax, 0x38
+    mov fs, ax
 
     call isr_handler
 
@@ -134,8 +136,10 @@ irq_common_stub:
     mov ax, 0x10  ; load the kernel data segment descriptor
     mov ds, ax
     mov es, ax
-    mov fs, ax
     mov gs, ax
+
+    mov ax, 0x38
+    mov fs, ax
 
     call irq_handler
 
