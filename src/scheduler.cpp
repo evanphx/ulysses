@@ -8,6 +8,8 @@
 #include "fs.hpp"
 #include "fs/devfs.hpp"
 
+#include "stats.hpp"
+
 #include "keyboard.hpp"
 
 Scheduler scheduler;
@@ -32,7 +34,7 @@ void Scheduler::init() {
   cleanup_.init();
 
   ready_queue_.init();
-  waiting_queue.init();
+  waiting_queue_.init();
 
   // Initialise the first thread (kernel thread)
   u32 mem = (u32)&initial_task;
@@ -76,16 +78,19 @@ void Scheduler::cleanup() {
 }
 
 void Scheduler::on_tick() {
-  Thread::RunList::Iterator i = waiting_queue.begin();
-
   bool schedule = false;
-  while(i.more_p()) {
-    Thread* thread = i.advance();
 
-    if(thread->alarm_expired()) {
-      waiting_queue.unlink(thread);
-      make_ready(thread);
-      schedule = true;
+  synchronized(lock_) {
+    Thread::RunList::Iterator i = waiting_queue_.begin();
+
+    while(i.more_p()) {
+      Thread* thread = i.advance();
+
+      if(thread->alarm_expired()) {
+        waiting_queue_.unlink(thread);
+        make_ready(thread);
+        schedule = true;
+      }
     }
   }
 
@@ -93,7 +98,10 @@ void Scheduler::on_tick() {
 }
 
 void Scheduler::on_idle() {
-  cleanup();
+  synchronized(lock_) {
+    cleanup();
+  }
+
   switch_thread();
 }
 
@@ -116,32 +124,37 @@ bool Scheduler::switch_thread() {
   Thread* next = 0;
   bool switched = false;
 
-  if(ready_queue_.count() == 0) {
-    next = idle_thread_;
-  } else {
-    next = ready_queue_.head();
+  synchronized(lock_) {
+    if(ready_queue_.count() == 0) {
+      next = idle_thread_;
+    } else {
+      next = ready_queue_.head();
+    }
   }
 
   ASSERT(next);
 
   if(next == current) goto done;
 
-  if(next != idle_thread_) {
-    // Move it to the end
-    ready_queue_.unlink(next);
-    ready_queue_.append(next);
+  synchronized(lock_) {
+    if(next != idle_thread_) {
+      // Move it to the end
+      ready_queue_.unlink(next);
+      ready_queue_.append(next);
+    }
+
+    switched = true;
+
+    current = next;
+
+    // Make sure the memory manager knows we've changed page directory.
+    vmem.current_directory = current->directory;
+
+    // Change our kernel stack over.
+    set_kernel_stack(current->kernel_stack);
   }
 
-  switched = true;
-
-  current = next;
   cpu::set_thread(current);
-
-  // Make sure the memory manager knows we've changed page directory.
-  vmem.current_directory = current->directory;
-
-  // Change our kernel stack over.
-  set_kernel_stack(current->kernel_stack);
 
   restore_registers(&current->regs, vmem.current_directory->physicalAddr);
 
@@ -153,106 +166,107 @@ done:
 
 void Scheduler::schedule_hiprio(Thread* thr) {
   if(current == thr) return;
-  hiprio_threads_.append(thr);
+
+  synchronized(lock_) {
+    hiprio_threads_.append(thr);
+  }
 }
 
 void Scheduler::process_keyboard() {
   if(!console_) return;
 
-  Buffer& buffer = keyboard.buffer();
-  if(!buffer.has_data_p()) return;
+  synchronized(lock_) {
+    Buffer& buffer = keyboard.buffer();
+    if(!buffer.has_data_p()) return;
 
-  console_->inject_bytes(buffer);
+    console_->inject_bytes(buffer);
 
-  buffer.clear();
+    buffer.clear();
+  }
 }
 
 void Scheduler::exit(int code) {
-  // We are modifying kernel structures, and so cannot be interrupted.
-  int st = cpu::disable_interrupts();
-
   ASSERT(getpid() != 0);
 
-  ready_queue_.unlink(current);
+  synchronized(lock_) {
+    ready_queue_.unlink(current);
 
-  process()->exit(code);
-  cleanup_.prepend(current->process());
-
-  cpu::restore_interrupts(st);
+    process()->exit(code);
+    cleanup_.prepend(current->process());
+  }
 
   switch_thread();
 }
 
 int Scheduler::wait_any(int *status) {
-  // We are modifying kernel structures, and so cannot be interrupted.
-  int st = cpu::disable_interrupts();
-
-  cpu::restore_interrupts(st);
   return -1;
 
 }
 
 void Scheduler::sleep(int secs) {
-  // We are modifying kernel structures, and so cannot be interrupted.
-  int st = cpu::disable_interrupts();
-
-  current->sleep_til(secs);
-
   ASSERT(getpid() != 0);
 
-  ready_queue_.unlink(current);
-  make_wait(current);
-
-  cpu::restore_interrupts(st);
+  synchronized(lock_) {
+    current->sleep_til(secs);
+    ready_queue_.unlink(current);
+    make_wait(current);
+  }
 
   switch_thread();
 }
 
-void Scheduler::io_wait() {
-  // We are modifying kernel structures, and so cannot be interrupted.
-  cpu::disable_interrupts();
+Scheduler::IOToken Scheduler::start_io() {
+  synchronized(lock_) {
+    current->state_ = Thread::eIOPending;
+  }
 
-  current->state_ = Thread::eIOWait;
+  return IOToken();
+}
 
+void Scheduler::io_wait(IOToken) {
   ASSERT(getpid() != 0);
 
-  ready_queue_.unlink(current);
+  synchronized(lock_) {
+    // Between the time of start_io and io_wait, the IO
+    // was completed! We don't even need to wait.
+    if(current->state_ != Thread::eIOPending) {
+      stats.fast_io.inc();
+      return;
+    }
 
-  cpu::enable_interrupts();
+    stats.slow_io.inc();
 
-  ASSERT(cpu::interrupts_enabled_p());
+    current->state_ = Thread::eIOWait;
+    ready_queue_.unlink(current);
+  }
 
   switch_thread();
-
-  cpu::disable_interrupts();
 }
 
 int Scheduler::fork() {
-  // We are modifying kernel structures, and so cannot be interrupted.
-  int st = cpu::disable_interrupts();
+  Process* proc = 0;
 
-  // Clone the address space.
-  x86::PageDirectory* directory = vmem.clone_current();
+  synchronized(lock_) {
+    // Clone the address space.
+    x86::PageDirectory* directory = vmem.clone_current();
 
-  // Create a new process.
-  Process* proc = new(kheap) Process(new_pid(), session());
-  processes_[proc->pid()] = proc;
+    // Create a new process.
+    proc = new(kheap) Process(new_pid(), session());
+    processes_[proc->pid()] = proc;
 
-  proc->directory = directory;
+    proc->directory = directory;
+  }
 
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
   Thread* new_thread = proc->new_thread((void*)mem);
-  new_thread->directory = directory;
+  new_thread->directory = proc->directory;
 
   new_thread->kernel_stack = mem + KERNEL_STACK_SIZE;
 
   make_ready(new_thread);
 
   if(save_registers(&new_thread->regs) == 0) {
-    // All finished: Reenable interrupts.
-    cpu::restore_interrupts(st);
-
     // And by convention return the PID of the child.
     return proc->pid();
   } else {
@@ -270,7 +284,9 @@ void Scheduler::start_new_thread(void (*func)(), Thread* th) {
 
   func();
 
-  ready_queue_.unlink(current);
+  synchronized(lock_) {
+    ready_queue_.unlink(current);
+  }
 
   // TODO cleanup th somehow
   switch_thread();
@@ -280,18 +296,22 @@ int Scheduler::spawn_init(void (*func)(void)) {
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
 
-  x86::PageDirectory* directory = vmem.new_directory();
+  Process* proc = 0;
 
-  // Create a new process.
-  Process* proc = new(kheap) Process(1, session());
-  processes_[1] = proc;
+  synchronized(lock_) {
+    x86::PageDirectory* directory = vmem.new_directory();
 
-  proc->directory = directory;
+    // Create a new process.
+    proc = new(kheap) Process(1, session());
+    processes_[1] = proc;
+
+    proc->directory = directory;
+  }
 
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
   Thread* new_thread = proc->new_thread((void*)mem);
-  new_thread->directory = directory;
+  new_thread->directory = proc->directory;
   new_thread->kernel_stack = mem + KERNEL_STACK_SIZE;
 
   proc->add_thread(new_thread);
@@ -315,12 +335,21 @@ Thread* Scheduler::spawn_thread(void (*func)()) {
   int st = cpu::disable_interrupts();
 
   // Clone the address space.
-  x86::PageDirectory* directory = vmem.clone_current();
+  x86::PageDirectory* directory;
+  
+  synchronized(lock_) {
+    directory = vmem.clone_current();
+  }
 
   // Create a new process.
   u32 mem = kmalloc_a(KERNEL_STACK_SIZE);
 
-  Thread* new_thread = process()->new_thread((void*)mem);
+  Thread* new_thread = 0;
+
+  synchronized(lock_) {
+    new_thread = process()->new_thread((void*)mem);
+  }
+
   new_thread->directory = directory;
   new_thread->kernel_stack = mem + KERNEL_STACK_SIZE;
 

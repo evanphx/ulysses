@@ -2,6 +2,7 @@
 #define BLOCK_BUFFER_HPP
 
 #include "block_region.hpp"
+#include "spinlock.hpp"
 
 class Thread;
 
@@ -25,6 +26,8 @@ namespace block {
 
     RegionRange range_;
     Thread* waiting_task_;
+
+    SpinLock lock_;
 
   public:
     Buffer(u16 size, u8* data, Device* dev=0)

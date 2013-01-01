@@ -36,6 +36,7 @@ public:
     eRunning,
 
     eWaiting,
+    eIOPending,
     eIOWait,
 
     eDieing,

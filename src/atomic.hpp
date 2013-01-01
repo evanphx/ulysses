@@ -1,18 +1,27 @@
-class AtomicInt {
-  int value_;
+#ifndef ATOMIC_HPP
+#define ATOMIC_HPP
 
-  AtomicInt(int i=0)
+template <typename T=int>
+class AtomicInt {
+  T value_;
+
+public:
+  AtomicInt(T i=0)
     : value_(i)
   {}
 
-  void set(int c) {
-    old = value_;
+  T value() {
+    return value_;
+  }
+
+  void set(T c) {
+    T old = value_;
     while(!__sync_bool_compare_and_swap(&value_, old, c)) {
       old = value_;
     }
   }
 
-  void add(int c) {
+  void add(T c) {
     __sync_fetch_and_add(&value_, c);
   }
 
@@ -28,3 +37,5 @@ class AtomicInt {
     sub(1);
   }
 };
+
+#endif

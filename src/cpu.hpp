@@ -15,16 +15,6 @@ namespace cpu {
     return (addr + cPageSize - 1) & cPageMask;
   }
 
-  static inline int enable_interrupts() {
-    asm volatile("sti");
-    return 1;
-  }
-
-  static inline int disable_interrupts() {
-    asm volatile("cli");
-    return 0;
-  }
-
   enum Flags {
     eIF = 1 << 9
   };
@@ -32,6 +22,20 @@ namespace cpu {
   static inline bool interrupts_enabled_p() {
     u32 flags = read_flags();
     return (flags & eIF) == eIF;
+  }
+
+  static inline int enable_interrupts() {
+    if(interrupts_enabled_p()) return 0;
+
+    asm volatile("sti");
+    return 1;
+  }
+
+  static inline int disable_interrupts() {
+    if(!interrupts_enabled_p()) return 1;
+
+    asm volatile("cli");
+    return 0;
   }
 
   static inline void restore_interrupts(int val) {

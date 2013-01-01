@@ -14,6 +14,9 @@ bool WaitQueue::wake() {
 }
 
 void WaitQueue::wait() {
+  auto token = scheduler.start_io();
+
   threads_.append(scheduler.current);
-  scheduler.io_wait();
+
+  scheduler.io_wait(token);
 }

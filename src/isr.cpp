@@ -43,7 +43,11 @@ extern "C" {
     u8 int_no = regs.int_no & 0xFF;
     if(interrupt::handlers[int_no] != 0) {
       interrupt::Handler* handler = interrupt::handlers[int_no];
+
+      cpu::enable_interrupts();
       handler->handle(&regs);
+      cpu::disable_interrupts();
+
     } else {
       console.printf("unhandled interrupt: %d\n", int_no);
 

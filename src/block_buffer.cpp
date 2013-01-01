@@ -35,21 +35,27 @@ namespace block {
   }
 
   void Buffer::wait() {
-    if(full_p()) return;
-    if((state_ & eRequested) == 0) fill();
+    auto token = scheduler.start_io();
 
-    waiting_task_ = scheduler.current;
+    synchronized(lock_) {
+      if(full_p()) return;
+      if((state_ & eRequested) == 0) fill();
 
-    scheduler.io_wait();
+      waiting_task_ = scheduler.current;
+    }
+
+    scheduler.io_wait(token);
 
     // We're back!
     ASSERT(full_p());
   }
 
   void Buffer::set_full() {
-    state_ |= eFull;
-    if(waiting_task_) {
-      scheduler.make_ready(waiting_task_);
+    synchronized(lock_) {
+      state_ |= eFull;
+      if(waiting_task_) {
+        scheduler.make_ready(waiting_task_);
+      }
     }
   }
 }
