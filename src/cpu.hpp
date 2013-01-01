@@ -80,6 +80,16 @@ namespace cpu {
     set_page_directory(page_directory());
   }
 
+  static inline u32 read_tid() {
+    u32 addr;
+    asm volatile("mov %%fs:0x0, %0" : "=r" (addr));
+    return addr;
+  }
+
+  static inline void set_tid(u32 tid) {
+    asm volatile("mov %0, %%fs:0x0" :: "r" (tid));
+  }
+
   void print_cpuid();
 }
 
