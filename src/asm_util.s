@@ -20,6 +20,19 @@ second_return:   ; A dummy symbol that should not be executed.
     ret          ; It's address is just used to determine if save
                  ; registers is returning for the 1st or 2nd time
 
+[GLOBAL read_fs_offset]
+read_fs_offset:
+    mov eax, [esp+4]
+    mov eax, [fs:eax]
+    ret
+
+[GLOBAL set_fs_offset]
+set_fs_offset:
+    mov eax, [esp+4]
+    mov ecx, [esp+8]
+    mov [fs:eax], ecx
+    ret
+
 [GLOBAL save_registers]
 save_registers:
     mov edx, [esp+4]

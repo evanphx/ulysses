@@ -6,6 +6,7 @@ class Thread;
 namespace cpu {
 
   extern "C" u32 read_flags();
+  extern "C" u32 read_fs_offset(int offset);
 
   static const unsigned int cPageSize = 0x1000;
   static const unsigned int cPageMask = ~0xfff;

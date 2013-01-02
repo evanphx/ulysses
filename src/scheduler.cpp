@@ -8,6 +8,7 @@
 #include "fs.hpp"
 #include "fs/devfs.hpp"
 
+#include "percpu.hpp"
 #include "stats.hpp"
 
 #include "keyboard.hpp"
