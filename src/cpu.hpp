@@ -87,16 +87,6 @@ namespace cpu {
     set_page_directory(page_directory());
   }
 
-  static inline Thread* read_thread() {
-    u32 addr;
-    asm volatile("mov %%fs:0x0, %0" : "=r" (addr));
-    return (Thread*)addr;
-  }
-
-  static inline void set_thread(Thread* tid) {
-    asm volatile("mov %0, %%fs:0x0" :: "r" (tid));
-  }
-
   void print_cpuid();
 }
 

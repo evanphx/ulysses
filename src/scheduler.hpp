@@ -13,10 +13,6 @@
 extern "C" void start_new_thread(void (*func)(), Thread* th);
 
 class Scheduler {
-public:
-  Thread* current;
-
-private:
   Process* processes_[constants::cMaxProcesses];
   Process::CleanupList cleanup_;
   Thread::RunList ready_queue_;
@@ -31,10 +27,13 @@ private:
   SpinLock lock_;
 
 public:
-
   void init();
 
   int new_pid();
+
+  Thread* current() {
+    return PerCPU::thread();
+  }
 
   void make_ready(Thread* thread) {
     synchronized(lock_) {
@@ -51,7 +50,7 @@ public:
   }
 
   Process* process() {
-    return current->process();
+    return current()->process();
   }
 
   void remove_from_ready(Thread* thr) {

@@ -1,6 +1,7 @@
 #ifndef SPINLOCK_HPP
 #define SPINLOCK_HPP
 
+#include "percpu.hpp"
 #include "cpu.hpp"
 
 class Thread;
@@ -22,7 +23,7 @@ public:
   {}
 
   void lock(const char* f=0, int l=-1) {
-    Thread* cur = cpu::read_thread();
+    Thread* cur = PerCPU::thread();
 
     enable_interrupts_ = cpu::interrupts_enabled_p();
 
@@ -41,7 +42,7 @@ public:
   }
 
   void unlock() {
-    Thread* cur = cpu::read_thread();
+    Thread* cur = PerCPU::thread();
 
     ASSERT(locker_ == cur);
 

@@ -41,7 +41,7 @@ namespace block {
       if(full_p()) return;
       if((state_ & eRequested) == 0) fill();
 
-      waiting_task_ = scheduler.current;
+      waiting_task_ = scheduler.current();
     }
 
     scheduler.io_wait(token);

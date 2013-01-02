@@ -26,8 +26,6 @@ void Scheduler::init() {
   // Rather important stuff happening, no interrupts please!
   cpu::disable_interrupts();
 
-  current = 0;
-
   for(int i = 0; i < constants::cMaxProcesses; i++) {
     processes_[0] = 0;
   }
@@ -48,17 +46,17 @@ void Scheduler::init() {
 
   processes_[proc->pid()] = proc;
   
-  current = proc->new_thread((void*)mem);
-  current->directory = vmem.current_directory;
-  current->kernel_stack = mem + KERNEL_STACK_SIZE;
+  Thread* th = proc->new_thread((void*)mem);
+  th->directory = vmem.current_directory;
+  th->kernel_stack = mem + KERNEL_STACK_SIZE;
 
-  current->state_ = Thread::eReady;
+  th->state_ = Thread::eReady;
 
-  cpu::set_thread(current);
+  PerCPU::set_thread(th);
 
-  ASSERT(current == cpu::read_thread());
+  ASSERT(th == PerCPU::thread());
 
-  idle_thread_ = current;
+  idle_thread_ = th;
 
   // Reenable interrupts.
   cpu::enable_interrupts();
@@ -111,13 +109,15 @@ void Scheduler::yield() {
 }
 
 bool Scheduler::switch_thread() {
+  Thread* cur = current();
+
   // If we haven't initialised threading yet, just return.
-  if(!current) return false;
+  if(!cur) return false;
 
   // We are modifying kernel structures, and so cannot be interrupted.
   int st = cpu::disable_interrupts();
 
-  if(save_registers(&current->regs)) {
+  if(save_registers(&cur->regs)) {
     cpu::restore_interrupts(st);
     return true;
   }
@@ -135,7 +135,7 @@ bool Scheduler::switch_thread() {
 
   ASSERT(next);
 
-  if(next == current) goto done;
+  if(next == cur) goto done;
 
   synchronized(lock_) {
     if(next != idle_thread_) {
@@ -146,18 +146,16 @@ bool Scheduler::switch_thread() {
 
     switched = true;
 
-    current = next;
-
     // Make sure the memory manager knows we've changed page directory.
-    vmem.current_directory = current->directory;
+    vmem.current_directory = next->directory;
 
     // Change our kernel stack over.
-    set_kernel_stack(current->kernel_stack);
+    set_kernel_stack(next->kernel_stack);
   }
 
-  cpu::set_thread(current);
+  PerCPU::set_thread(next);
 
-  restore_registers(&current->regs, vmem.current_directory->physicalAddr);
+  restore_registers(&next->regs, vmem.current_directory->physicalAddr);
 
 done:
   cpu::restore_interrupts(st);
@@ -166,7 +164,7 @@ done:
 }
 
 void Scheduler::schedule_hiprio(Thread* thr) {
-  if(current == thr) return;
+  if(current() == thr) return;
 
   synchronized(lock_) {
     hiprio_threads_.append(thr);
@@ -190,10 +188,10 @@ void Scheduler::exit(int code) {
   ASSERT(getpid() != 0);
 
   synchronized(lock_) {
-    ready_queue_.unlink(current);
+    ready_queue_.unlink(current());
 
     process()->exit(code);
-    cleanup_.prepend(current->process());
+    cleanup_.prepend(current()->process());
   }
 
   switch_thread();
@@ -208,9 +206,9 @@ void Scheduler::sleep(int secs) {
   ASSERT(getpid() != 0);
 
   synchronized(lock_) {
-    current->sleep_til(secs);
-    ready_queue_.unlink(current);
-    make_wait(current);
+    current()->sleep_til(secs);
+    ready_queue_.unlink(current());
+    make_wait(current());
   }
 
   switch_thread();
@@ -218,7 +216,7 @@ void Scheduler::sleep(int secs) {
 
 Scheduler::IOToken Scheduler::start_io() {
   synchronized(lock_) {
-    current->state_ = Thread::eIOPending;
+    current()->state_ = Thread::eIOPending;
   }
 
   return IOToken();
@@ -230,15 +228,15 @@ void Scheduler::io_wait(IOToken) {
   synchronized(lock_) {
     // Between the time of start_io and io_wait, the IO
     // was completed! We don't even need to wait.
-    if(current->state_ != Thread::eIOPending) {
+    if(current()->state_ != Thread::eIOPending) {
       stats.fast_io.inc();
       return;
     }
 
     stats.slow_io.inc();
 
-    current->state_ = Thread::eIOWait;
-    ready_queue_.unlink(current);
+    current()->state_ = Thread::eIOWait;
+    ready_queue_.unlink(current());
   }
 
   switch_thread();
@@ -286,7 +284,7 @@ void Scheduler::start_new_thread(void (*func)(), Thread* th) {
   func();
 
   synchronized(lock_) {
-    ready_queue_.unlink(current);
+    ready_queue_.unlink(current());
   }
 
   // TODO cleanup th somehow

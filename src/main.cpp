@@ -58,7 +58,7 @@ extern "C" int kmain(struct multiboot *mboot_ptr, u32 magic, u32 kstart, u32 ken
   // Initialise all the ISRs and segmentation
   init_descriptor_tables();
 
-  primary_percpu.thread = 0;
+  primary_percpu.thread_ = 0;
 
   set_fs((u32)&primary_percpu, sizeof(PerCPU));
 

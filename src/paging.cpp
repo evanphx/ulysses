@@ -136,7 +136,7 @@ public:
     // Ok, this is for a mapping in the current process.
     if(mmap) {
       if(!rw || mmap->writable_p()) {
-        if(mmap->fulfill(scheduler.current, faulting_address)) return;
+        if(mmap->fulfill(scheduler.current(), faulting_address)) return;
       }
     }
 
